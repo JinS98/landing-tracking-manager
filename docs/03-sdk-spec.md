@@ -23,6 +23,8 @@ SDK는 siteId로 공개 게시본만 요청합니다. 응답은 schemaVersion=1�
 
 어댑터는 전역 객체를 임의 재정의하지 않고 기존 GTM/Google Ads dataLayer와 협력해야 합니다. 현재 SDK의 script src 검사만으로 인라인 하드코딩 태그나 GTM 내부 태그까지 발견할 수 없으므로 배포 전 수동 태그 인벤토리와 실제 사이트 검증이 필수입니다.
 
+1일차 공식 자료 대조 결과, [Google Ads](https://support.google.com/google-ads/answer/7548399)는 공통 태그와 전환 이벤트의 실행 시점이 다르고 GTM 컨테이너 안에서 이미 구성된 태그도 확인해야 합니다. [Naver WCS](https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/)는 신형 wcs.trans와 구형 wcs.cnv가 같은 전환 지점에 공존하면 중복될 수 있으며, 신형 테스트가 구형 전환 필터링에 영향을 줄 수 있습니다. 실제 랜딩에서 버전을 확인하기 전에는 전환 유형을 임의로 교체하지 않습니다. 상세 확인 표는 [1일차 기록](daily/day-01.md)에 있습니다.
+
 ## 전환 흐름
 
 실제 문의 성공 콜백에서 고유 eventId와 함께 track을 호출하는 방식이 목표입니다. 단기 호환을 위해 /complete?token=... 진입 또는 Next.js식 client navigation을 감지합니다. token은 접수 증명이 아니며 서버 검증을 대체하지 않습니다. eventId 해시를 sessionStorage에 기록해 동일 세션의 중복 시도를 줄입니다. 첫 전송 결과가 불명확할 수 있어 전환 전송은 자동 재시도하지 않습니다.
