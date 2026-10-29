@@ -1,0 +1,12 @@
+{
+  "name": "landing-tracking-manager",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*", "functions"],
+  "scripts": {
+    "dev": "npm run dev -w @ltm/admin",
+    "build": "npm run build -w @ltm/admin",
+    "typecheck": "npm run typecheck -w @ltm/admin"
+  },
+  "engines": {"node": ">=20.19.0"}
+}
