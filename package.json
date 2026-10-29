@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "npm run dev -w @ltm/admin",
     "build": "npm run build -w @ltm/admin",
-    "typecheck": "npm run typecheck -w @ltm/admin"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "node --experimental-strip-types --test tests/mvp.test.mjs"
   },
   "engines": {"node": ">=20.19.0"}
 }

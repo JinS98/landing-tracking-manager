@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // No browser access in the standalone MVP. Server Admin SDK bypasses Rules
+    // and therefore must enforce the company gateway and operator authorization.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

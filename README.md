@@ -1,37 +1,58 @@
 # Landing Tracking Manager
 
-광고주 랜딩페이지 통합 광고 스크립트 관리 플랫폼의 **관리자 페이지 기본 구조**입니다.
+광고주 랜딩마다 흩어진 광고 태그와 전환 설정을 사이트 단위로 관리하기 위한 독립형 MVP입니다. 사내 직원이 로그인 화면 없이 가상 업체를 선택하고 설정 변경 흐름을 시연할 수 있습니다. 현재 앱은 브라우저 메모리 데모이며 실제 광고주 데이터, 운영 ID, Firebase 쓰기, 광고 태그 실행은 포함하지 않습니다.
 
-## 실행
+## 해결하려는 문제
 
-```bash
-npm install
-npm run dev
-```
+랜딩마다 하드코딩된 스크립트는 매체 ID와 전환 조건을 수정할 때 배포와 중복 점검이 어렵습니다. 이 프로젝트는 업체 → 여러 사이트 → 초안 → 게시본의 경계를 만들고, 추후 회사 관리자 시스템의 접근 제어와 연결해 운영하려는 기반입니다.
 
-Node.js 20.19+ 권장. `http://localhost:5173` 접속.
+## 핵심 아키텍처
 
-## 현재 구현된 기능
-- React 19 + TypeScript + Vite 기반 반응형 관리자 UI
-- 대시보드 / 업체 목록·검색 / 업체별 스크립트 편집
-- GTM, Google Ads, Naver WCS, 당근, Meta, TikTok 설정 폼
-- 공통 스크립트와 전환 이벤트 분리, 공통 매체 연결 여부 확인
-- 설정 활성화/비활성화·삭제·JSON 복사 (메모리 기반 데모)
-- Firebase 클라이언트 초기화 준비 (`apps/admin/.env.example`)
+- apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
+- packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
+- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스. 실제 매체 어댑터는 아직 없습니다.
+- functions: 향후 사내 접근 게이트 뒤의 관리자 쓰기 API와 공개 SDK 조회 API.
+- packages/landing-register: 향후 인증된 배포 파이프라인의 사이트 자동 등록 CLI.
 
-## 아직 구현되지 않은 기능
-- Firebase Auth 로그인 및 Firestore 저장
-- Cloud Functions, SDK, 업체 자동 등록 CLI 실제 구현
-- 설정 게시/롤백, 설치 진단, 실제 광고 태그 실행
+운영 단계에는 사내 VPN/접근 프록시/기존 인증 게이트웨이 → 서버 측 운영자 검증 → Firestore 쓰기/게시 순서가 필요합니다. SDK는 게시된 공개 설정만 조회합니다. 기존 MLeverage SDK와 별도 모듈이며 통합 지점을 남겨 둡니다.
 
-**주의:** 현재 앱은 데모입니다. 설정은 새로고침 시 초기화되며 광고 플랫폼에 아무 데이터도 전송하지 않습니다. `VITE_DEMO_MODE=false`로 바꿔도 CRUD가 자동 연결되지는 않습니다. 프로덕션 사용 금지.
+## 현재 주요 기능
 
-## 폴더
-- `apps/admin`: 관리자 React 앱
-- `packages/tracking-core`: 추후 어댑터 공통 로직
-- `packages/tracking-sdk`: 추후 브라우저 SDK
-- `packages/landing-register`: 추후 운영 빌드/배포 등록 CLI
-- `functions`: 추후 Cloud Functions
-- `docs`: 아키텍처, 보안, API, 테스트, 20일 개발 일정
+- 가상 업체 전체 검색, 업체별 여러 사이트 선택, siteId 중복을 막는 데모 등록
+- 대시보드의 업체·사이트·활성 매체·SDK 확인 현황 및 최근 변경 이력
+- 6개 매체(GTM, Google Ads, Naver WCS, 당근, Meta, TikTok)의 공통 태그와 전환 이벤트 설정 추가·수정·비활성화·제거
+- 초안과 데모 게시본 비교, 메모리 내 게시·롤백 및 이력
+- 공개 설정 형식 검증과 SDK 런타임 뼈대. 매체별 실제 태그 실행은 미구현
 
-[기획서 (Notion)](https://app.notion.com/p/408c883fa202812ba344f9355cedfb64)
+## 기술 스택과 이유
+
+- React 19 + TypeScript: 설정 편집 상태와 매체별 입력을 타입으로 관리
+- Vite 6: 빠른 로컬 실행과 정적 관리자 UI 빌드
+- React Router: 업체·사이트·이력 화면 분리
+- npm workspaces: 관리자, 공통 계약, SDK, 서버/CLI의 교체 가능한 경계
+- Firebase/Firestore: 운영 저장소로 계획 중이며 현재 클라이언트 연결은 제거됨
+
+## 실행과 데모
+
+앱 실행은 Node.js 20.19+에서 가능합니다. 아래 npm test는 Node.js 22.14+의 TypeScript 타입 제거 기능을 사용합니다.
+
+    npm install
+    npm run dev
+
+브라우저에서 http://localhost:5173 을 엽니다. 별도 계정이나 Firebase 설정은 필요하지 않습니다. 업체 관리에서 가상 사이트를 등록하고, 설정 편집 → 미리보기 → 데모 게시 → 롤백을 시험할 수 있습니다. 새로고침하면 데모 상태가 초기화됩니다. apps/admin/.env.example의 플래그를 바꿔도 운영 쓰기는 활성화되지 않습니다.
+
+검증 명령:
+
+    npm run typecheck
+    npm run build
+    npm test
+
+## 회사 관리자 통합 계획
+
+apps/admin/src/lib/adminGateway.ts의 인터페이스를 회사 관리자 API 어댑터로 구현합니다. functions/src/access.ts의 서버 측 게이트 검증·인가 인터페이스를 별도로 구현해야 합니다. 서버는 접근 게이트가 검증한 운영자 신원과 권한을 매 요청 확인하고, Firestore에서 버전 충돌 검사·감사 로그·게시/롤백을 처리합니다. 사이트 자동 등록은 별도 배포 주체의 인증으로만 허용합니다.
+
+## 보안 제한과 미구현 항목
+
+운영 API, 배포된 Firestore Rules, CDN 게시, 사이트 등록 CLI, 6개 매체 어댑터, 실제 SDK 설치 진단은 아직 없습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 이 상태에서 운영 환경 배포나 실제 광고 전환 측정에 사용하면 안 됩니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
+
+설계·일정·운영 전 검증 항목은 docs/를 참조하세요.
