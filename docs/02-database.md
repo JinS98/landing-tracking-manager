@@ -2,7 +2,7 @@
 
 ## 현재 상태와 적용 범위
 
-현재 관리자 화면은 브라우저 메모리 데모이며 Firestore에 연결하지 않습니다. `firebase.json`, `firestore.rules`, `firestore.indexes.json`은 로컬 검증과 향후 운영 구현을 위한 파일이고 실제 Firebase 프로젝트에는 배포되지 않았습니다. 아래 스키마와 트랜잭션은 **서버 구현 계약**이며 저장·게시 API의 구현 완료를 뜻하지 않습니다.
+현재 관리자 화면은 브라우저 메모리 데모이며 Firestore에 연결하지 않습니다. `firebase.json`, `firestore.rules`, `firestore.indexes.json`은 로컬 검증과 향후 운영 구현을 위한 파일이고 실제 Firebase 프로젝트에는 배포되지 않았습니다. 5일차에 `registerSite`의 서버 전용 트랜잭션은 구현해 로컬 에뮬레이터에서 검증했습니다. 초안 저장·게시·롤백과 HTTP API는 여전히 **서버 구현 계약**입니다.
 
 ## 문서 ID와 관계
 
@@ -34,7 +34,9 @@
 3. `publish`: 같은 트랜잭션에서 초안 버전 확인, 다음 `publishedVersion` 계산, 결정적 ID의 릴리스 생성, 설정 포인터 갱신, 감사 로그 추가를 처리합니다. CDN 정적 JSON 배포는 Firestore 트랜잭션 밖이므로 실패 상태와 재시도·이전 공개본 유지 정책을 별도로 구현해야 합니다.
 4. `rollback`: 대상 릴리스를 읽고 내용을 복사한 **새 버전**의 릴리스를 생성합니다. `sourceVersion`에 대상 버전을 기록하고, 현재 데모처럼 초안도 대상 내용으로 갱신하는 정책을 운영 구현 시 검증합니다. 기존 릴리스는 변경하지 않습니다.
 
-현재 `apps/admin/src/lib/demoWorkspace.ts`는 메모리 데모 동작을 보여 주며 서버 트랜잭션·동시성·CDN 배포를 보장하지 않습니다. 사이트 고유성, 초안 버전, 감사 로그, 추가 전용 릴리스는 서버 구현과 테스트가 필요합니다.
+등록 트랜잭션은 [Firebase 트랜잭션 지침](https://firebase.google.com/docs/firestore/manage-data/transactions)에 따라 모든 문서 읽기를 쓰기 전에 수행하고, 재시도될 수 있는 콜백 안에서 외부 API 호출이나 로그 전송 같은 부수 효과를 실행하지 않습니다.
+
+현재 `apps/admin/src/lib/demoWorkspace.ts`는 메모리 데모 동작을 보여 주며 서버 트랜잭션·동시성·CDN 배포를 보장하지 않습니다. 별도 `functions/src/registerSite.ts`의 사이트 등록은 로컬 에뮬레이터에서 멱등성·동시 요청·초안 보존을 시험했습니다. 초안 버전 관리, 게시·롤백, 운영 접근 제어와 실제 Firestore 배포는 구현과 테스트가 필요합니다.
 
 ## 계획된 조회와 인덱스
 

@@ -23,7 +23,11 @@
 | POST /admin/sites/{siteId}/rollback | targetVersion | 이전 내용을 새 릴리스로 게시 |
 | GET /admin/sites/{siteId}/history | cursor | 권한 확인 후 감사/릴리스 조회 |
 
-사이트 자동 등록 CLI는 직원 브라우저 세션이 아닌 별도 배포 주체 인증을 사용합니다. 5일차에 `/internal/sites/register` 등 별도 경로와 자격 증명 계약을 구체화합니다. 직원 브라우저 세션이나 CSRF 토큰을 CLI 인증으로 재사용하지 않습니다. 게이트 연결 전에는 위 관리자 경로를 배포하거나 공개하지 않습니다.
+## 배포 주체 등록 계약
+
+5일차 CLI는 `POST /internal/sites/register`로 `siteId`, `companyId`, `domain`, `environment`를 전송하도록 구현했습니다. 기본 실행은 dry run이며, `--apply`는 HTTPS URL과 배포 파이프라인의 별도 Bearer 자격 증명이 있어야 요청합니다. 응답 계약은 신규 `201 {status:"created", ...입력}`, 동일 입력 재시도 `200 {status:"existing", ...입력}`, 입력 오류 400, 미인증 401, 범위 부족 403, 업체 없음 404, 다른 등록과의 충돌 409입니다. CLI는 5xx·네트워크 오류만 최대 한 번 재시도합니다. 실제 HTTP 경로는 아직 없습니다.
+
+`functions/src/registerSite.ts`에는 `DeploymentVerifier` 계약과 Firestore 등록 트랜잭션이 있습니다. 검증기는 직원 쿠키가 아닌 CI/서비스 자격 증명의 서명·발급자·대상 서비스·만료·허용 범위 및 신뢰된 진입점을 확인해야 합니다. 현재는 이 검증기의 운영 구현이 없으며, 미설정 시 등록 진입 함수는 503으로 거부합니다. 자격 증명을 URL·로그·저장소에 넣지 않습니다. HTTP 핸들러와 게이트 연결 전에는 운영 쓰기 API를 배포하지 않습니다. `importJobs` 갱신과 배포 성공 이벤트 연결도 후속 작업입니다.
 
 ## 공개 SDK 설정 조회
 
