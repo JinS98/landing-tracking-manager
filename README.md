@@ -59,6 +59,10 @@
     npm run build
     npm test
 
+Firestore Rules 로컬 검증에는 별도로 Firebase CLI와 Java 21이 필요합니다. 아래 명령은 `demo-landing-tracking-manager` 에뮬레이터에서만 익명 접근 거부를 검사합니다.
+
+    npm run test:rules
+
 ## 회사 관리자 통합 계획
 
 apps/admin/src/lib/adminGateway.ts의 인터페이스를 회사 관리자 API 어댑터로 구현합니다. functions/src/access.ts의 서버 측 게이트 검증·인가 인터페이스를 별도로 구현해야 합니다. 서버는 접근 게이트가 검증한 운영자 신원과 권한을 매 요청 확인하고, Firestore에서 버전 충돌 검사·감사 로그·게시/롤백을 처리합니다. 사이트 자동 등록은 별도 배포 주체의 인증으로만 허용합니다.
