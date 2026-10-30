@@ -7,7 +7,7 @@
     "dev": "npm run dev -w @ltm/admin",
     "build": "npm run build -w @ltm/admin",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "node --experimental-strip-types --test tests/mvp.test.mjs",
+    "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --test tests/firestore-rules.test.mjs\""
   },
   "devDependencies": {"typescript": "~5.8.3"},

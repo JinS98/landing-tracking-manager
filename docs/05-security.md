@@ -6,9 +6,16 @@
 
 `firebase.json`은 Rules와 인덱스 파일 및 로컬 에뮬레이터만 연결합니다. `npm run test:rules`는 `demo-landing-tracking-manager` 프로젝트에서 여섯 컬렉션의 익명 REST 조회·목록·생성·수정·삭제와 중첩 경로 거부를 검사했습니다. 이는 **로컬 Rules 검증**이며 실제 Firebase 프로젝트의 배포 상태나 서버 IAM 설정을 증명하지 않습니다. Firestore 서버 SDK는 Rules를 우회하므로 회사 게이트, 요청별 인가, 서비스 계정 최소 권한을 서버 구현에서 별도로 검증해야 합니다. [Firebase Rules 조건](https://firebase.google.com/docs/firestore/security/rules-conditions), [에뮬레이터 구성](https://firebase.google.com/docs/emulator-suite/install_and_configure)을 기준으로 합니다.
 
+## 4일차 접근 제어 계약
+
+기존 회사 관리자 인증 게이트웨이를 운영자 신원의 기준으로 연결할 계획입니다. VPN·접근 프록시는 도달 가능한 네트워크를 줄이는 추가 방어로 사용합니다. 실제 게이트와 세션 방식이 확인되지 않았으므로 신원 assertion, 서명 키, 프록시 신뢰 목록, CSRF 토큰 저장 방식은 아직 확정하지 않습니다. 게이트가 브라우저의 신원 헤더를 제거·덮어쓰고, API로 직접 우회 진입할 수 없도록 네트워크에서 막아야 합니다. 서버는 전달된 헤더의 존재만으로 신원을 인정하지 않습니다. [OWASP 신원 전달 지침](https://cheatsheetseries.owasp.org/cheatsheets/Identity_Propagation_Patterns_Cheat_Sheet.html)을 참조합니다.
+
+`functions/src/access.ts`의 접근 검사 조합 함수는 검증기·CSRF 검사기·인가자 중 하나라도 없으면 503으로 거부합니다. 완전한 운영자 컨텍스트와 만료되지 않은 세션을 요구하고, 쓰기에서는 CSRF 검사 후 자원 범위를 인가합니다. 현재 7개의 **모의 구현 테스트**가 익명/위조 헤더, 만료 세션, CSRF 실패, 범위 부족, 검사 순서를 확인했습니다. 실제 게이트 검증·세션 철회·CSRF 토큰 발급·운영 권한 정책·HTTP 라우트는 구현되지 않았습니다. [OWASP CSRF 지침](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)을 실제 세션 방식에 맞춰 적용해야 합니다.
+
 ## 운영 전 필수 조건
 
 - [ ] 사내 VPN, 접근 프록시 또는 기존 회사 인증 게이트웨이가 관리자 진입과 API를 보호
+- [ ] 신뢰된 게이트만 API에 도달하고 클라이언트 신원 헤더를 제거·덮어쓰는지 확인
 - [ ] 서버가 모든 쓰기·게시·롤백 요청의 운영자 신원, 권한, 사이트 범위를 검증
 - [ ] CSRF, 세션 만료, 리플레이, rate limit, 감사 로그 정책 검증
 - [ ] Firestore Rules로 익명 및 브라우저 직접 쓰기 거부; 에뮬레이터에서 부정 테스트

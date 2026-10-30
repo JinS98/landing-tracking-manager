@@ -11,10 +11,10 @@
 - apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
 - packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
 - packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스. 실제 매체 어댑터는 아직 없습니다.
-- functions: 향후 사내 접근 게이트 뒤의 관리자 쓰기 API와 공개 SDK 조회 API.
+- functions: 향후 사내 접근 게이트 뒤의 관리자 쓰기 API와 공개 SDK 조회 API. 현재는 접근 검사 조합 함수만 있고 HTTP API는 없음.
 - packages/landing-register: 향후 인증된 배포 파이프라인의 사이트 자동 등록 CLI.
 
-운영 단계에는 사내 VPN/접근 프록시/기존 인증 게이트웨이 → 서버 측 운영자 검증 → Firestore 쓰기/게시 순서가 필요합니다. SDK는 게시된 공개 설정만 조회합니다. 기존 MLeverage SDK와 별도 모듈이며 통합 지점을 남겨 둡니다.
+운영 단계에는 기존 회사 관리자 인증 게이트웨이와 필요 시 VPN/접근 프록시 → 서버 측 운영자 검증·세션·CSRF·권한 검사 → Firestore 쓰기/게시 순서가 필요합니다. SDK는 게시된 공개 설정만 조회합니다. 기존 MLeverage SDK와 별도 모듈이며 통합 지점을 남겨 둡니다.
 
 ## 워크스페이스 경계와 실행 명령
 
@@ -23,7 +23,7 @@
 | `@ltm/admin` | 다른 내부 패키지를 아직 직접 참조하지 않음 | `npm run dev`로 메모리 데모, `npm run build`로 관리자 정적 빌드 |
 | `@ltm/tracking-core` | 내부 패키지 의존 없음 | 공개 게시 설정 타입과 검증 함수의 타입 검사 |
 | `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사. 배포 번들과 매체 어댑터는 미구현 |
-| `@ltm/functions` | 현재 내부 패키지 의존 없음 | 서버 접근 계약의 타입 검사. HTTP API는 미구현 |
+| `@ltm/functions` | 현재 내부 패키지 의존 없음 | 접근 검사 조합 함수의 타입 검사와 모의 구현 테스트. HTTP API는 미구현 |
 | `@ltm/landing-register` | 현재 내부 패키지 의존 없음 | CLI 경계의 타입 검사. 실행 가능한 CLI는 미구현 |
 
 루트 `npm run typecheck`는 다섯 워크스페이스를 각각 검사합니다. `npm run build`는 현재 관리자 앱만 빌드합니다. `npm test`는 별도 MVP 테스트를 실행합니다. Node.js 22.14+가 필요한 테스트 명령 외의 설치·개발·빌드는 Node.js 20.19+를 기준으로 합니다.
