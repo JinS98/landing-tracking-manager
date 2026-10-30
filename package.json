@@ -9,5 +9,6 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "node --experimental-strip-types --test tests/mvp.test.mjs"
   },
+  "devDependencies": {"typescript": "~5.8.3"},
   "engines": {"node": ">=20.19.0"}
 }
