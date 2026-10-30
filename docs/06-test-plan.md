@@ -30,9 +30,14 @@
 ## SDK와 실제 랜딩 검증
 
 - [ ] 6개 매체 공통 로더와 전환 어댑터의 공식 API 및 진단 도구 확인
+- [ ] 참고 코드 확인: app/layout.tsx의 next/script, 완료 페이지의 Google Ads·Meta 호출, mleverage.client.js, Naver WCS 스니펫을 원본과 대조
+- [ ] 실제 저장소 코드 확인: 신규 SDK의 /complete 감지·sessionStorage 중복 키·어댑터 미구현 상태 확인
+- [ ] 운영 환경 검증 필요: GTM 컨테이너 내부 태그·트리거, Naver WCS trans/cnv 버전, 실제 플랫폼 이벤트 수신
 - [ ] GTM/Google Ads dataLayer 충돌과 기존 하드코딩/GTM 내부 태그 중복 방지
 - [ ] Next.js 초기 로드, pushState/replaceState/popstate와 /complete?token 진입
 - [ ] 실제 문의 성공 콜백 기반 track 호출, 재방문·새 탭·네트워크 지연 중복 시도
+- [ ] 기존 완료 페이지와 신규 SDK를 함께 설치한 단계에서 한 매체·이벤트의 실행 주체가 정확히 하나인지 확인
+- [ ] 매체별 전환 전후 성공·실패·재방문·뒤로 가기에서 전송 횟수와 롤백 시 단일 실행 주체 확인
 - [ ] 동의 거부/철회, 외부 스크립트 차단, 리다이렉트 시간 제한
 - [ ] SDK 오류가 문의 폼·페이지 성능을 방해하지 않는지 확인
 

@@ -11,6 +11,7 @@
 - track API
 - Next.js History 이동
 - token 기반 단기 감지
+- 참고 코드 확인: 기존 랜딩의 /complete?token 이동과 완료 페이지 Google Ads·Meta 호출 사례(원본 미열람)
 
 ## 수정 또는 생성할 파일
 
@@ -28,6 +29,8 @@
 
 - 초기 로드/pushState/replaceState/popstate
 - token 없는 방문
+- 실제 저장소 코드 확인: 신규 SDK의 /complete 감지 구현
+- 운영 환경 검증 필요: 실제 문의 성공 응답과 완료 페이지 호출 시점
 
 ## 완료 체크리스트
 
