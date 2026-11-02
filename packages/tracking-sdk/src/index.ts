@@ -8,7 +8,7 @@ export type ProviderAdapter = {
   convert(tag: ConversionTag): Promise<void> | void;
 };
 export type TrackingDiagnostic = {
-  kind: 'config_loaded' | 'adapter_loaded' | 'adapter_failed' | 'consent_blocked' | 'ready' | 'init_failed';
+  kind: 'config_loaded' | 'adapter_setup' | 'adapter_failed' | 'consent_blocked' | 'ready' | 'init_failed';
   siteId: string;
   releaseVersion?: number;
   provider?: Provider;
@@ -86,7 +86,7 @@ export class TrackingSdk {
         const adapter = this.options.adapters[tag.provider];
         if (!adapter) continue;
         if (registry.has(key)) { this.loadedProviders.add(tag.provider); continue; }
-        try { await adapter.load(tag); registry.add(key); this.loadedProviders.add(tag.provider); this.emitDiagnostic('adapter_loaded', tag.provider); }
+        try { await adapter.load(tag); registry.add(key); this.loadedProviders.add(tag.provider); this.emitDiagnostic('adapter_setup', tag.provider); }
         catch (error) { this.emitDiagnostic('adapter_failed', tag.provider); this.reportError(errorFrom(error)); }
       }
       if (this.destroyed) return;

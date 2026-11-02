@@ -10,7 +10,7 @@
 
 - apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
 - packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
-- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 6개 매체 어댑터. 실제 랜딩 적용과 배포 번들은 아직 없습니다.
+- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 6개 매체 어댑터. 19일차에 브라우저 IIFE 번들 빌드와 가상 랜딩 통합 테스트를 추가했습니다. 실제 랜딩 적용과 운영 배포는 아직 없습니다.
 - functions: 사내 접근 게이트용 관리자 접근 검사, 서버 전용 사이트 등록 트랜잭션, 독립 공개 설정 HTTP 핸들러와 Firestore 리더. 서버 배포 진입점은 없습니다.
 - packages/landing-register: 배포 파이프라인용 등록 CLI. 기본 실행은 dry run이고 실제 API 연결은 미완료.
 
@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | `@ltm/admin` | `@ltm/tracking-core`의 초안·공개 설정 계약 사용 | `npm run dev`로 메모리 데모, `npm run build`로 관리자 정적 빌드 |
 | `@ltm/tracking-core` | 내부 패키지 의존 없음 | 공개 게시 설정 타입과 검증 함수의 타입 검사 |
-| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사와 6개 매체 어댑터 모의 DOM 테스트. 배포 번들은 미구현 |
+| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사, 6개 매체 어댑터 모의 DOM 테스트, 브라우저 IIFE 번들 빌드와 가상 랜딩 통합 테스트. 운영 배포는 미구현 |
 | `@ltm/functions` | `@ltm/tracking-core`와 서버 전용 Firebase Admin SDK 사용 | 접근 검사·등록 트랜잭션·공개 조회 핸들러 타입 검사와 로컬 HTTP/Firestore 테스트. 서버 배포 진입점은 미구현 |
 | `@ltm/landing-register` | 내부 패키지 의존 없음 | Node.js 22.14+ 등록 CLI의 입력 검사·dry run·향후 인증 API 요청 |
 

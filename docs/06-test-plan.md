@@ -6,6 +6,7 @@
     npm run build
     npm test
     npm run test:ui
+    npm run test:landing
     npm run test:rules
     npm run test:registration
     npm run test:public-config
@@ -61,6 +62,8 @@
 - [ ] GTM/Google Ads dataLayer 충돌과 기존 하드코딩/GTM 내부 태그 중복 방지
 - [x] 모의 브라우저에서 초기 로드, pushState/replaceState/popstate와 /complete?token 진입·뒤로 가기 중복 방지
 - [ ] 실제 Next.js 랜딩에서 같은 이동과 스크립트 수신 확인
+- [x] 로컬 Edge 가상 랜딩에서 관찰 모드·단일 전환 주체·동의 거부·태그 차단·완료 경로 재방문 확인
+- [x] 브라우저 IIFE 번들 로드와 기존·신규 전환 주체 동시 활성화 시 2회 시도 재현
 - [x] 모의 브라우저에서 랜덤 token 재방문·새 탭·설정 로드 지연·매체 오류 시도 확인
 - [ ] 실제 문의 성공 후 token 발급·완료 경로 이동·새 탭 수신 정책 확인
 - [ ] 기존 완료 페이지와 신규 SDK를 함께 설치한 단계에서 한 매체·이벤트의 실행 주체가 정확히 하나인지 확인
