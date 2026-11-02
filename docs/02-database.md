@@ -2,7 +2,7 @@
 
 ## 현재 상태와 적용 범위
 
-현재 관리자 화면은 브라우저 메모리 데모이며 Firestore에 연결하지 않습니다. `firebase.json`, `firestore.rules`, `firestore.indexes.json`은 로컬 검증과 향후 운영 구현을 위한 파일이고 실제 Firebase 프로젝트에는 배포되지 않았습니다. 5일차에 `registerSite`의 서버 전용 트랜잭션은 구현해 로컬 에뮬레이터에서 검증했습니다. 7일차 엑셀 importJobs도 **메모리 데모만** 구현했습니다. 초안 저장·게시·롤백과 일괄 등록 HTTP API는 여전히 **서버 구현 계약**입니다.
+현재 관리자 화면은 브라우저 메모리 데모이며 Firestore에 연결하지 않습니다. `firebase.json`, `firestore.rules`, `firestore.indexes.json`은 로컬 검증과 향후 운영 구현을 위한 파일이고 실제 Firebase 프로젝트에는 배포되지 않았습니다. 5일차에 `registerSite`의 서버 전용 트랜잭션을, 12일차에 공개 설정의 서버 전용 Firestore 리더와 HTTP 핸들러를 구현해 로컬 에뮬레이터와 HTTP 테스트에서 검증했습니다. 7일차 엑셀 importJobs는 **메모리 데모만** 구현했습니다. 초안 저장·게시·롤백과 일괄 등록 HTTP API는 여전히 **서버 구현 계약**입니다.
 
 ## 문서 ID와 관계
 
@@ -15,7 +15,7 @@
 | `auditLogs/{logId}` | 서버 생성 ID | `siteId`, `action`, `actorRef`, `createdAt`, `beforeVersion`, `afterVersion`, `summary` | 관리자 전용, 추가 전용 |
 | `importJobs/{jobId}` | 서버가 검증한 파일 내용·열 매핑의 멱등 키 | `source`, `status`, `createdCount`, `skippedCount`, `errorCount`, `createdAt`, `updatedAt`, `actorRef`, `fileDigest`, `mappingDigest` | 관리자/배포 주체 전용. 현재는 Firestore 미구현 |
 
-`createdAt`, `updatedAt`, `publishedAt`은 운영 저장 시 서버 기준 Firestore Timestamp를 사용하고, 공개 JSON의 `publishedAt`만 ISO 8601 문자열로 변환할 계획입니다. 현재 데모의 문자열 시각과 서버 저장 형식은 구분합니다. 업체 한 곳에 사이트 여러 개가 속합니다. 삭제·이관 정책은 미정이며 운영 구현 전에 정해야 합니다.
+`createdAt`, `updatedAt`, `publishedAt`은 운영 저장 시 서버 기준 Firestore Timestamp를 사용할 계획입니다. 12일차 공개 리더는 릴리스의 Timestamp를 ISO 8601 문자열로 변환합니다. 현재 데모의 문자열 시각과 서버 저장 형식은 구분합니다. 업체 한 곳에 사이트 여러 개가 속합니다. 삭제·이관 정책은 미정이며 운영 구현 전에 정해야 합니다.
 
 `siteId`는 데모와 동일하게 소문자·숫자·하이픈 2~63자로 제한할 계획입니다. `sites/{siteId}` 생성은 서버 트랜잭션에서 **기존 문서가 없을 때만** 수행하고, 재시도 시 동일한 입력이면 기존 사이트를 반환하며 업체·도메인·환경이 다르면 충돌을 보고합니다. 기존 `trackingConfigs/{siteId}`는 재등록으로 덮어쓰지 않습니다. `companyId + domain + environment`의 중복 정책은 별도 운영 결정이 필요하며, 쿼리 조회만으로 동시 등록의 고유성을 보장한다고 가정하지 않습니다.
 
@@ -25,7 +25,7 @@
 
 `trackingConfigs/{siteId}.draft`는 `siteId`, `version`, `common[]`, `conversions[]`를 가진 관리자 편집본입니다. `draftVersion`은 `draft.version`과 같아야 하며 낙관적 잠금 값으로 사용합니다. 매체는 GTM, Google Ads, Naver WCS, 당근, Meta, TikTok의 `gtm`, `googleAds`, `naverWcs`, `karrot`, `meta`, `tiktok`입니다. 공통 설정은 `id`, `provider`, `enabled`, `trackingId`와 매체별 허용 필드, 전환 설정은 `id`, `provider`, `enabled`, `event=consultation_complete`와 `sendTo`·`conversionType`·`eventName` 중 매체별 허용 필드만 갖습니다.
 
-게시는 초안을 검증하고 `schemaVersion=1`, `siteId`, `releaseVersion`, `publishedAt`, `common`, `conversions`만 공개 JSON으로 투영합니다. `packages/tracking-core/src/index.ts`의 `parseDraftConfig`, `projectPublishedConfig`, `parsePublishedConfig`가 초안 저장·투영·공개 JSON 읽기에 같은 매체 규칙을 적용합니다. GTM 컨테이너 ID, Google Ads AW ID와 `send_to`, Naver WCS ID·유입 도메인·전환 유형을 검증하고, 활성 전환에는 활성 공통 설정을 요구합니다. 허용되지 않은 필드와 임의 JavaScript/HTML은 거부합니다. 업체명, 내부 도메인 정책, 초안, `actorRef`, 감사 로그, 비밀키, 개인정보는 공개 JSON에 넣지 않습니다. 현재 이 투영은 **브라우저 메모리 데모 게시**에서만 실행되며 서버 게시 검증·JSON 생성과 CDN 배포는 아직 구현되지 않았습니다.
+게시는 초안을 검증하고 `schemaVersion=1`, `siteId`, `releaseVersion`, `publishedAt`, `common`, `conversions`만 공개 JSON으로 투영합니다. `packages/tracking-core/src/index.ts`의 `parseDraftConfig`, `projectPublishedConfig`, `parsePublishedConfig`가 초안 저장·투영·공개 JSON 읽기에 같은 매체 규칙을 적용합니다. 활성 전환에는 활성 공통 설정을 요구하며 허용되지 않은 필드와 임의 JavaScript/HTML은 거부합니다. 업체명, 내부 도메인 정책, 초안, `actorRef`, 감사 로그, 비밀키, 개인정보는 공개 JSON에 넣지 않습니다. 이 투영은 **브라우저 메모리 데모 게시**와 **12일차 공개 HTTP 응답**에서 실행됩니다. 서버 게시 쓰기와 CDN 배포는 아직 구현되지 않았습니다.
 
 ## 서버 트랜잭션 계약
 
@@ -36,7 +36,7 @@
 
 등록 트랜잭션은 [Firebase 트랜잭션 지침](https://firebase.google.com/docs/firestore/manage-data/transactions)에 따라 모든 문서 읽기를 쓰기 전에 수행하고, 재시도될 수 있는 콜백 안에서 외부 API 호출이나 로그 전송 같은 부수 효과를 실행하지 않습니다.
 
-현재 `apps/admin/src/lib/demoWorkspace.ts`는 메모리 데모 동작을 보여 주며 서버 트랜잭션·동시성·CDN 배포를 보장하지 않습니다. 별도 `functions/src/registerSite.ts`의 사이트 등록은 로컬 에뮬레이터에서 멱등성·동시 요청·초안 보존을 시험했습니다. 초안 버전 관리, 게시·롤백, 운영 접근 제어와 실제 Firestore 배포는 구현과 테스트가 필요합니다.
+현재 `apps/admin/src/lib/demoWorkspace.ts`는 메모리 데모 동작을 보여 주며 서버 트랜잭션·동시성·CDN 배포를 보장하지 않습니다. 별도 `functions/src/registerSite.ts`의 사이트 등록은 로컬 에뮬레이터에서 멱등성·동시 요청·초안 보존을 시험했습니다. `functions/src/publicConfig.ts`의 공개 리더도 로컬 에뮬레이터에서 게시 포인터와 릴리스 조회를 검증했습니다. 초안 버전 관리, 게시·롤백, 운영 접근 제어와 실제 Firestore 배포는 구현과 테스트가 필요합니다.
 
 ## 7일차 일괄 등록 계약
 

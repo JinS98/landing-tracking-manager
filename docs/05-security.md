@@ -12,6 +12,8 @@
 
 `functions/src/access.ts`의 접근 검사 조합 함수는 검증기·CSRF 검사기·인가자 중 하나라도 없으면 503으로 거부합니다. 완전한 운영자 컨텍스트와 만료되지 않은 세션을 요구하고, 쓰기에서는 CSRF 검사 후 자원 범위를 인가합니다. 현재 7개의 **모의 구현 테스트**가 익명/위조 헤더, 만료 세션, CSRF 실패, 범위 부족, 검사 순서를 확인했습니다. 실제 게이트 검증·세션 철회·CSRF 토큰 발급·운영 권한 정책·HTTP 라우트는 구현되지 않았습니다. [OWASP CSRF 지침](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)을 실제 세션 방식에 맞춰 적용해야 합니다.
 
+12일차 공개 설정 HTTP 핸들러는 관리자 쓰기 경로와 독립적이며 Firestore 게시 포인터와 불변 릴리스만 서버에서 읽습니다. 공개 DTO 투영이 실패하면 오류로 거부하며 초안·감사 로그·운영자 필드를 응답하지 않습니다. 등록된 HTTPS 도메인에만 CORS 허용 헤더를 보내지만 CORS는 서버 간 조회를 막는 인증 수단이 아닙니다. 운영 배포 전에는 별도 서버 진입점, IAM 최소 권한, TLS/CDN 및 속도 제한을 연결해야 합니다.
+
 ## 5일차 배포 주체 경계
 
 등록 CLI의 `--apply`는 HTTPS 전용 경로와 배포 환경의 별도 Bearer 자격 증명을 요구합니다. 직원 브라우저 쿠키를 사용하지 않으며 URL·로그에 토큰을 출력하지 않습니다. 서버 `registerSiteFromDeployment`는 검증기가 없거나 만료·대상 서비스가 다른 주체를 거부합니다. 실제 서명·발급자·허용 사이트 범위를 검증할 `DeploymentVerifier`와 HTTP 라우트는 **미구현**입니다. 로컬 Firestore 트랜잭션 테스트는 가상 배포 주체를 주입한 검증이며 운영 인증을 증명하지 않습니다. 서비스 계정은 서버에서만 사용하고 IAM 최소 권한과 키 관리가 필요합니다. [Firebase Admin SDK 설정](https://firebase.google.com/docs/admin/setup), [서버 SDK와 Rules 경계](https://firebase.google.com/docs/firestore/security/rules-conditions)를 참조하세요.

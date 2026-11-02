@@ -14,7 +14,7 @@ export type PublishedConfig = {
 
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const safeId = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value);
-const safeSiteId = (value: unknown): value is string => typeof value === 'string' && /^[a-z0-9][a-z0-9-]{1,62}$/.test(value);
+export const isValidSiteId = (value: unknown): value is string => typeof value === 'string' && /^[a-z0-9][a-z0-9-]{1,62}$/.test(value);
 const safeDomain = (value: unknown): value is string => typeof value === 'string' && value.length <= 253 && /\.[a-z]{2,}$/.test(value) &&
   value.split('.').every(label => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
 const provider = (value: unknown): value is Provider => providerNames.includes(value as Provider);
@@ -76,7 +76,7 @@ function parseTags(commonInput: unknown, conversionInput: unknown): { common: Co
 /** Validate the complete editable draft before storing it. No arbitrary code or extra fields are accepted. */
 export function parseDraftConfig(value: unknown, expectedSiteId: string): DraftConfig {
   if (!record(value) || !hasOnly(value, ['siteId', 'version', 'common', 'conversions']) ||
-      !safeSiteId(expectedSiteId) || value.siteId !== expectedSiteId ||
+      !isValidSiteId(expectedSiteId) || value.siteId !== expectedSiteId ||
       !Number.isSafeInteger(value.version) || (value.version as number) < 0) throw new Error('초안 설정의 siteId 또는 버전이 올바르지 않습니다.');
   const tags = parseTags(value.common, value.conversions);
   return { siteId: expectedSiteId, version: value.version as number, ...tags };
@@ -94,7 +94,7 @@ export function projectPublishedConfig(draft: unknown, siteId: string, releaseVe
 /** Accept only the public data fields the SDK understands; reject unexpected fields. */
 export function parsePublishedConfig(value: unknown, expectedSiteId: string): PublishedConfig {
   if (!record(value) || !hasOnly(value, ['schemaVersion', 'siteId', 'releaseVersion', 'publishedAt', 'common', 'conversions']) ||
-      value.schemaVersion !== 1 || !safeSiteId(expectedSiteId) || value.siteId !== expectedSiteId ||
+      value.schemaVersion !== 1 || !isValidSiteId(expectedSiteId) || value.siteId !== expectedSiteId ||
       !Number.isSafeInteger(value.releaseVersion) || (value.releaseVersion as number) < 1 ||
       typeof value.publishedAt !== 'string' || !Number.isFinite(Date.parse(value.publishedAt))) {
     throw new Error('Invalid published config');

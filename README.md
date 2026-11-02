@@ -1,6 +1,6 @@
 # Landing Tracking Manager
 
-광고주 랜딩마다 흩어진 광고 태그와 전환 설정을 사이트 단위로 관리하기 위한 독립형 MVP입니다. 사내 직원이 로그인 화면 없이 가상 업체를 선택하고 설정 변경 흐름을 시연할 수 있습니다. 현재 관리자 앱은 브라우저 메모리 데모이며 실제 광고주 데이터, 운영 ID, 운영 Firebase 쓰기, 광고 태그 실행은 포함하지 않습니다. 서버 등록 트랜잭션은 별도 로컬 에뮬레이터에서만 검증했습니다.
+광고주 랜딩마다 흩어진 광고 태그와 전환 설정을 사이트 단위로 관리하기 위한 독립형 MVP입니다. 사내 직원이 로그인 화면 없이 가상 업체를 선택하고 설정 변경 흐름을 시연할 수 있습니다. 현재 관리자 앱은 브라우저 메모리 데모이며 실제 광고주 데이터, 운영 ID, 운영 Firebase 쓰기, 광고 태그 실행은 포함하지 않습니다. 서버 등록 트랜잭션과 공개 설정 리더는 별도 로컬 에뮬레이터에서 검증했습니다.
 
 ## 해결하려는 문제
 
@@ -11,7 +11,7 @@
 - apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
 - packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
 - packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 6개 매체 어댑터. 실제 랜딩 적용과 배포 번들은 아직 없습니다.
-- functions: 향후 사내 접근 게이트 뒤의 관리자 쓰기 API와 공개 SDK 조회 API. 현재는 접근 검사와 서버 전용 사이트 등록 트랜잭션만 있으며 HTTP API는 없음.
+- functions: 사내 접근 게이트용 관리자 접근 검사, 서버 전용 사이트 등록 트랜잭션, 독립 공개 설정 HTTP 핸들러와 Firestore 리더. 서버 배포 진입점은 없습니다.
 - packages/landing-register: 배포 파이프라인용 등록 CLI. 기본 실행은 dry run이고 실제 API 연결은 미완료.
 
 운영 단계에는 기존 회사 관리자 인증 게이트웨이와 필요 시 VPN/접근 프록시 → 서버 측 운영자 검증·세션·CSRF·권한 검사 → Firestore 쓰기/게시 순서가 필요합니다. SDK는 게시된 공개 설정만 조회합니다. 기존 MLeverage SDK와 별도 모듈이며 통합 지점을 남겨 둡니다.
@@ -23,7 +23,7 @@
 | `@ltm/admin` | `@ltm/tracking-core`의 초안·공개 설정 계약 사용 | `npm run dev`로 메모리 데모, `npm run build`로 관리자 정적 빌드 |
 | `@ltm/tracking-core` | 내부 패키지 의존 없음 | 공개 게시 설정 타입과 검증 함수의 타입 검사 |
 | `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사와 6개 매체 어댑터 모의 DOM 테스트. 배포 번들은 미구현 |
-| `@ltm/functions` | 서버 전용 Firebase Admin SDK 사용 | 접근 검사와 등록 트랜잭션의 타입 검사·로컬 에뮬레이터 테스트. HTTP API는 미구현 |
+| `@ltm/functions` | `@ltm/tracking-core`와 서버 전용 Firebase Admin SDK 사용 | 접근 검사·등록 트랜잭션·공개 조회 핸들러 타입 검사와 로컬 HTTP/Firestore 테스트. 서버 배포 진입점은 미구현 |
 | `@ltm/landing-register` | 내부 패키지 의존 없음 | Node.js 22.14+ 등록 CLI의 입력 검사·dry run·향후 인증 API 요청 |
 
 루트 `npm run typecheck`는 다섯 워크스페이스를 각각 검사합니다. `npm run build`는 현재 관리자 앱만 빌드합니다. 전체 워크스페이스 설치와 CLI·서버·테스트는 Node.js 22.14+를 기준으로 합니다.
@@ -36,8 +36,8 @@
 - 6개 매체(GTM, Google Ads, Naver WCS, 당근, Meta, TikTok)의 공통 태그와 전환 이벤트 설정 추가·수정·비활성화·제거
 - 초안과 데모 게시본 비교, 메모리 내 게시·롤백 및 이력
 - 6개 매체의 공통/전환 설정을 저장 전에 검증하고 데모 게시 시 공개 DTO로 투영. 임의 코드 필드 거부
-- 공개 설정 형식 검증과 SDK 런타임 뼈대. Naver WCS·당근·Meta·TikTok 실행 어댑터는 미구현
-- GTM·Google Ads 직접 설치 어댑터의 태그 삽입·전환 호출 모의 테스트. 실제 랜딩과 광고 플랫폼 수신 검증은 미완료
+- 공개 설정 형식 검증과 SDK 런타임, 6개 매체 어댑터의 태그 삽입·전환 호출 모의 테스트. 실제 랜딩과 광고 플랫폼 수신 검증은 미완료
+- 공개 설정 HTTP 핸들러의 게시본 투영, ETag 재검증, 미게시 404 및 Firestore 리더 로컬 검증. 서버 배포는 미완료
 - 배포 사이트 등록 CLI의 dry run, 서버 등록 트랜잭션의 로컬 에뮬레이터 검증. 운영 등록 API는 미구현
 
 ## 기술 스택과 이유
@@ -69,8 +69,9 @@ Firestore Rules 로컬 검증에는 별도로 Firebase CLI와 Java 21이 필요�
 
     npm run test:rules
     npm run test:registration
+    npm run test:public-config
 
-`test:registration`도 Firebase CLI·Java 21을 사용하며 `demo-` 에뮬레이터에서만 서버 등록 트랜잭션을 검사합니다.
+`test:registration`과 `test:public-config`도 Firebase CLI·Java 21을 사용하며 `demo-` 에뮬레이터에서만 서버 등록 트랜잭션과 공개 설정 리더를 검사합니다.
 
 ## 회사 관리자 통합 계획
 
@@ -78,6 +79,6 @@ apps/admin/src/lib/adminGateway.ts의 인터페이스를 회사 관리자 API �
 
 ## 보안 제한과 미구현 항목
 
-운영 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, CDN 게시, 나머지 네 매체 어댑터, 실제 SDK 설치 진단은 아직 없습니다. GTM·Google Ads 어댑터도 실제 랜딩과 광고 플랫폼 수신 검증 전에는 운영 전환 측정에 사용하지 않습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
+운영 관리자 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, 공개 HTTP 핸들러의 서버 마운트, CDN 게시, 실제 SDK 설치 진단은 아직 없습니다. 6개 매체 어댑터도 실제 랜딩과 광고 플랫폼 수신 검증 전에는 운영 전환 측정에 사용하지 않습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
 
 설계·일정·운영 전 검증 항목은 docs/를 참조하세요.

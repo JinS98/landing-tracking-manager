@@ -7,10 +7,13 @@
     npm test
     npm run test:rules
     npm run test:registration
+    npm run test:public-config
 
 `npm run test:rules`는 Firebase CLI와 Java 21이 설치된 환경에서 로컬 Firestore 에뮬레이터를 시작합니다. `demo-` 프로젝트만 사용하고 실제 Firebase에 접속하지 않습니다. 현재 익명 REST의 여섯 컬렉션 조회·목록·생성·수정·삭제 및 중첩 경로 거부 테스트 7개가 통과했습니다. 인증된 클라이언트, 서버 IAM, 실제 Rules 배포와 인덱스 빌드는 검증되지 않았습니다.
 
 `npm run test:registration`은 같은 `demo-` 에뮬레이터에서 서버 전용 등록 트랜잭션의 동일 입력 재시도, 도메인·업체·환경 충돌, 기존 초안 보존, 동시 요청, 자격 증명 검사 계약을 시험합니다. 실제 배포 주체 검증기·HTTP API·운영 IAM은 시험하지 않습니다.
+
+`npm run test:public-config`는 `demo-` 에뮬레이터에서 게시 포인터와 불변 릴리스 조회, Firestore Timestamp 변환, 릴리스 누락 오류를 시험합니다. `npm test`의 로컬 HTTP 테스트는 공개 DTO만 반환하는지, siteId·CORS·ETag·304·캐시 재검증을 시험합니다. 실제 배포 서버와 CDN은 검증하지 않습니다.
 
 브라우저 데모 시나리오:
 
@@ -36,7 +39,7 @@
 - [x] 로컬 Firestore 에뮬레이터에서 siteId 중복·동시 요청·초안 보존 검증
 - [ ] 실제 인증된 등록 API와 배포 파이프라인, 운영 Firestore에서 동일 시나리오 검증
 - [ ] expectedVersion 충돌 409, 릴리스 버전 단조 증가, 롤백 새 버전 생성
-- [ ] 공개 API는 게시본만 반환하고 비밀/PII/초안/감사 정보 제외
+- [x] 로컬 공개 HTTP 핸들러는 게시본만 반환하고 비밀/초안/감사 정보 제외
 - [ ] CDN ETag/TTL/무효화, 게시 실패 시 이전 버전 유지
 
 ## SDK와 실제 랜딩 검증

@@ -1,6 +1,6 @@
 # API 명세
 
-현재 네트워크 API는 구현되지 않았습니다. 관리자 데모는 서버 요청을 보내지 않습니다. 아래 계약은 기존 회사 관리자 인증 게이트웨이와 서버 검증기를 연결한 후 구현합니다. `functions/src/access.ts`에는 HTTP 라우트가 아닌 접근 검사 조합 함수만 있습니다.
+12일차에 `GET /tracking-config?siteId=...`의 독립 HTTP 핸들러와 Firestore 게시본 리더를 구현했습니다. 서버에 마운트하거나 배포하는 진입점은 아직 없으며 관리자 데모는 서버 요청을 보내지 않습니다. 아래 관리자 계약은 기존 회사 관리자 인증 게이트웨이와 서버 검증기를 연결한 후 구현합니다. `functions/src/access.ts`에는 HTTP 라우트가 아닌 접근 검사 조합 함수만 있습니다.
 
 ## 운영자 인증·인가 계약
 
@@ -34,7 +34,9 @@
 
 ## 공개 SDK 설정 조회
 
-GET /tracking-config?siteId=... 는 인증 없는 공개 데이터가 필요한 별도 경로입니다. 응답은 게시된 JSON만 포함합니다. 초안, 업체 내부 정보, 운영자, 로그, 비밀키를 반환하지 않습니다. siteId 형식 검증, rate limit, 허용 도메인/CORS 정책, ETag, Cache-Control, 게시 시 캐시 무효화가 필요합니다. 미게시 사이트는 404로 응답하고 빈 운영 설정을 임의 생성하지 않습니다.
+`functions/src/publicConfig.ts`의 `createPublicConfigHandler(firestorePublicConfigStore(db))`는 관리자 쓰기 경로와 독립된 `GET /tracking-config?siteId=...`를 처리합니다. `HEAD`도 허용합니다. `trackingConfigs/{siteId}.publishedVersion` 포인터가 1 이상일 때만 `trackingReleases/{siteId}__v{version}`의 불변 `config`를 읽고, `projectPublishedConfig`로 공개 필드만 투영합니다. 초안, 업체 내부 정보, 운영자, 로그, 비밀키는 응답에 넣지 않습니다. `sites/{siteId}.domain`은 HTTPS Origin 일치 시 CORS 허용 여부를 정하는 데만 사용합니다. Origin이 달라도 서버 간 공개 조회는 가능하지만 브라우저 CORS 접근은 허용하지 않습니다.
+
+응답 필드는 `schemaVersion`, `siteId`, `releaseVersion`, `publishedAt`, `common`, `conversions`뿐입니다. SHA-256 기반 강한 ETag를 제공하며 `If-None-Match`가 현재 본문과 같으면 `304`를 반환합니다. `Cache-Control: public, max-age=0, s-maxage=0, must-revalidate`로 브라우저·공유 캐시가 매번 재검증하도록 합니다. 게시 HTTP 경로 및 CDN purge가 구현되기 전까지 TTL은 0초입니다. 포인터가 바뀐 다음 원본 서버 요청은 새 ETag와 게시본을 반환하지만 운영 CDN 배포·purge는 아직 검증되지 않았습니다. 미게시·없는 사이트는 `404`, 잘못된 siteId는 `400`, 메서드 불일치는 `405`, 포인터와 릴리스 불일치 또는 저장소 오류는 `503`으로 응답하고 오류 응답은 `no-store`입니다. 공개 경로의 속도 제한·서버 실행 환경·TLS/CDN 연결은 배포 시 추가해야 합니다.
 
 ## 오류와 동시성
 

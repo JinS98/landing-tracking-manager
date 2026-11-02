@@ -7,9 +7,10 @@
     "dev": "npm run dev -w @ltm/admin",
     "build": "npm run build -w @ltm/admin",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs tests/registration-cli.test.mjs tests/import.test.mjs tests/tracking-config.test.mjs tests/google-adapters.test.mjs tests/naver-adapter.test.mjs tests/social-adapters.test.mjs",
+    "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs tests/registration-cli.test.mjs tests/import.test.mjs tests/tracking-config.test.mjs tests/google-adapters.test.mjs tests/naver-adapter.test.mjs tests/social-adapters.test.mjs tests/public-config.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --test tests/firestore-rules.test.mjs\"",
-    "test:registration": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/registration-firestore.test.mjs\""
+    "test:registration": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/registration-firestore.test.mjs\"",
+    "test:public-config": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/public-config-firestore.test.mjs\""
   },
   "devDependencies": {"typescript": "~5.8.3"},
   "engines": {"node": ">=22.14.0"}
