@@ -15,6 +15,7 @@
     "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs tests/registration-cli.test.mjs tests/import.test.mjs tests/tracking-config.test.mjs tests/google-adapters.test.mjs tests/naver-adapter.test.mjs tests/social-adapters.test.mjs tests/public-config.test.mjs tests/sdk-init.test.mjs tests/sdk-conversion.test.mjs tests/script-editor.test.mjs",
     "test:ui": "node --test tests/admin-ui.test.mjs",
     "test:landing": "npm run build:sdk && node --experimental-strip-types --test tests/landing-integration.test.mjs",
+    "test:hosting": "firebase emulators:exec --only hosting --project demo-landing-tracking-manager \"node --test tests/hosting-smoke.test.mjs\"",
     "test:rules": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --test tests/firestore-rules.test.mjs\"",
     "test:registration": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/registration-firestore.test.mjs\"",
     "test:public-config": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/public-config-firestore.test.mjs\"",

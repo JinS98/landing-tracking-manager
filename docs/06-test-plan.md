@@ -7,6 +7,7 @@
     npm test
     npm run test:ui
     npm run test:landing
+    npm run test:hosting
     npm run test:rules
     npm run test:registration
     npm run test:public-config
@@ -19,6 +20,8 @@
 `npm run test:public-config`는 `demo-` 에뮬레이터에서 게시 포인터와 불변 릴리스 조회, Firestore Timestamp 변환, 릴리스 누락 오류를 시험합니다. `npm test`의 로컬 HTTP 테스트는 공개 DTO만 반환하는지, siteId·CORS·ETag·304·캐시 재검증을 시험합니다. 실제 배포 서버와 CDN은 검증하지 않습니다.
 
 `npm run test:release`는 같은 에뮬레이터에서 접근 검사 누락 거부, 초안 버전 충돌, 변경 없는 게시 거부, 동시 쓰기, 불변 릴리스와 새 번호로 롤백, 공개 조회 포인터 갱신을 시험합니다. 실제 회사 게이트·관리자 HTTP·CDN은 시험하지 않습니다.
+
+`npm run test:hosting`은 정적 관리자 빌드를 Hosting 에뮬레이터에 올려 기본·깊은 경로와 Edge 렌더링을 확인합니다. 로컬 에뮬레이터는 이 구성의 응답 헤더를 실제 Hosting과 동일하게 제공하지 않아, 캐시·CSP는 라이브 `node tests/hosting-smoke.test.mjs https://pixel-manager.web.app`에서 검증합니다. 이는 운영 API나 SDK 광고 수신 검증이 아닙니다.
 
 13일차 SDK 초기화 테스트는 잘못된 siteId·게시 응답, 404, 오프라인, 응답/본문 지연, 동시 SDK 삽입, 동의 거부, 일부 어댑터 실패가 태그 실행과 전환 호출에 미치는 영향을 모의 브라우저에서 확인합니다.
 
@@ -73,4 +76,4 @@
 
 ## 운영 완료 기준
 
-위 서버·SDK 항목이 통과하고 사내 접근 게이트, 운영 Firestore Rules, 실사이트 태그 인벤토리, 게시/롤백 절차가 검증되기 전에는 운영 배포 완료로 표시하지 않습니다. 현재 완료된 것은 메모리 데모 UI, SDK 공통 구조, 초안·공개 DTO 공통 검증과 로컬 자동 테스트, Rules·등록 트랜잭션의 에뮬레이터 검사, 타입/빌드 검사입니다.
+위 서버·SDK 항목이 통과하고 사내 접근 게이트, 운영 Firestore Rules, 실사이트 태그 인벤토리, 게시/롤백 절차가 검증되기 전에는 운영 배포 완료로 표시하지 않습니다. 현재 완료된 것은 메모리 데모 UI의 정적 Hosting 배포, SDK 공통 구조, 초안·공개 DTO 공통 검증과 로컬 자동 테스트, Rules·등록 트랜잭션의 에뮬레이터 검사, 타입/빌드 검사입니다.

@@ -4,6 +4,8 @@
 
 로그인 화면이 없는 데모는 인증이 없는 운영 서비스가 아닙니다. 현재 브라우저 메모리 외에는 쓰지 않으며 VITE_DEMO_MODE 값을 바꿔도 운영 모드가 열리지 않습니다. Firebase 클라이언트 Auth/Firestore 연결은 제거했습니다. firestore.rules의 초안은 브라우저 읽기/쓰기를 모두 거부하며 아직 배포되지 않았습니다. 운영 편의를 위해 공개 쓰기로 완화하지 않습니다.
 
+20일차 공개 주소 https://pixel-manager.web.app 은 **가상 데이터만 포함하는 정적 데모**입니다. Hosting에는 `apps/admin/dist`만 배포했고 Firestore Rules·인덱스, Functions, 관리자 HTTP API, SDK 번들은 배포하지 않았습니다. 브라우저의 데모 게시·롤백은 새로고침 시 사라집니다. Hosting의 CSP·no-cache HTML·해시 자산 캐시·Referrer-Policy·nosniff를 라이브 응답에서 확인했습니다. 이 공개 화면은 직원 인증이 없으므로 운영 데이터와 연결하지 않습니다.
+
 `firebase.json`은 Rules와 인덱스 파일 및 로컬 에뮬레이터만 연결합니다. `npm run test:rules`는 `demo-landing-tracking-manager` 프로젝트에서 여섯 컬렉션의 익명 REST 조회·목록·생성·수정·삭제와 중첩 경로 거부를 검사했습니다. 이는 **로컬 Rules 검증**이며 실제 Firebase 프로젝트의 배포 상태나 서버 IAM 설정을 증명하지 않습니다. Firestore 서버 SDK는 Rules를 우회하므로 회사 게이트, 요청별 인가, 서비스 계정 최소 권한을 서버 구현에서 별도로 검증해야 합니다. [Firebase Rules 조건](https://firebase.google.com/docs/firestore/security/rules-conditions), [에뮬레이터 구성](https://firebase.google.com/docs/emulator-suite/install_and_configure)을 기준으로 합니다.
 
 ## 4일차 접근 제어 계약

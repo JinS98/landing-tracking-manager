@@ -2,6 +2,8 @@
 
 광고주 랜딩마다 흩어진 광고 태그와 전환 설정을 사이트 단위로 관리하기 위한 독립형 MVP입니다. 사내 직원이 로그인 화면 없이 가상 업체를 선택하고 설정 변경 흐름을 시연할 수 있습니다. 현재 관리자 앱은 브라우저 메모리 데모이며 실제 광고주 데이터, 운영 ID, 운영 Firebase 쓰기, 광고 태그 실행은 포함하지 않습니다. 서버 등록 트랜잭션과 공개 설정 리더는 별도 로컬 에뮬레이터에서 검증했습니다.
 
+**정적 데모:** https://pixel-manager.web.app — 업체·사이트·게시 데이터는 브라우저 메모리에서만 바뀌고 새로고침하면 초기화됩니다. 실제 관리자 인증·Firestore 쓰기·매체 픽셀 운영 기능은 연결되지 않았습니다.
+
 ## 해결하려는 문제
 
 랜딩마다 하드코딩된 스크립트는 매체 ID와 전환 조건을 수정할 때 배포와 중복 점검이 어렵습니다. 이 프로젝트는 업체 → 여러 사이트 → 초안 → 게시본의 경계를 만들고, 추후 회사 관리자 시스템의 접근 제어와 연결해 운영하려는 기반입니다.
@@ -64,14 +66,20 @@
     npm run typecheck
     npm run build
     npm test
+    npm run test:ui
+    npm run test:landing
+    npm run test:hosting
 
 Firestore Rules 로컬 검증에는 별도로 Firebase CLI와 Java 21이 필요합니다. 아래 명령은 `demo-landing-tracking-manager` 에뮬레이터에서만 익명 접근 거부를 검사합니다.
 
     npm run test:rules
     npm run test:registration
     npm run test:public-config
+    npm run test:release
 
 `test:registration`과 `test:public-config`도 Firebase CLI·Java 21을 사용하며 `demo-` 에뮬레이터에서만 서버 등록 트랜잭션과 공개 설정 리더를 검사합니다.
+
+정적 데모는 Firebase 프로젝트 `landing-tracking`의 Hosting 사이트 `pixel-manager`에 배포했습니다. `landing-tracking.web.app`은 이미 다른 프로젝트가 사용 중이어서 요청 후보 중 사용 가능한 `pixel-manager.web.app`을 선택했습니다. 배포·라이브 확인·복구 명령과 정적 데모/운영 기능의 경계는 [배포 절차](docs/07-deployment.md)에 있습니다.
 
 ## 회사 관리자 통합 계획
 
@@ -79,6 +87,6 @@ apps/admin/src/lib/adminGateway.ts의 인터페이스를 회사 관리자 API �
 
 ## 보안 제한과 미구현 항목
 
-운영 관리자 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, 공개 HTTP 핸들러의 서버 마운트, CDN 게시, 실제 SDK 설치 진단은 아직 없습니다. 6개 매체 어댑터도 실제 랜딩과 광고 플랫폼 수신 검증 전에는 운영 전환 측정에 사용하지 않습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
+운영 관리자 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, 공개 HTTP 핸들러의 서버 마운트, **게시 설정 JSON의** CDN 배포, 실제 SDK 설치 진단은 아직 없습니다. Firebase Hosting에는 정적 데모 화면만 배포했습니다. 6개 매체 어댑터도 실제 랜딩과 광고 플랫폼 수신 검증 전에는 운영 전환 측정에 사용하지 않습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
 
 설계·일정·운영 전 검증 항목은 docs/를 참조하세요.
