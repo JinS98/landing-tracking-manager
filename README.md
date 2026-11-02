@@ -10,7 +10,7 @@
 
 - apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
 - packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
-- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스. 실제 매체 어댑터는 아직 없습니다.
+- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 GTM·Google Ads 어댑터. 나머지 네 매체 어댑터는 아직 없습니다.
 - functions: 향후 사내 접근 게이트 뒤의 관리자 쓰기 API와 공개 SDK 조회 API. 현재는 접근 검사와 서버 전용 사이트 등록 트랜잭션만 있으며 HTTP API는 없음.
 - packages/landing-register: 배포 파이프라인용 등록 CLI. 기본 실행은 dry run이고 실제 API 연결은 미완료.
 
@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | `@ltm/admin` | `@ltm/tracking-core`의 초안·공개 설정 계약 사용 | `npm run dev`로 메모리 데모, `npm run build`로 관리자 정적 빌드 |
 | `@ltm/tracking-core` | 내부 패키지 의존 없음 | 공개 게시 설정 타입과 검증 함수의 타입 검사 |
-| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사. 배포 번들과 매체 어댑터는 미구현 |
+| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사와 GTM·Ads 어댑터 모의 DOM 테스트. 배포 번들은 미구현 |
 | `@ltm/functions` | 서버 전용 Firebase Admin SDK 사용 | 접근 검사와 등록 트랜잭션의 타입 검사·로컬 에뮬레이터 테스트. HTTP API는 미구현 |
 | `@ltm/landing-register` | 내부 패키지 의존 없음 | Node.js 22.14+ 등록 CLI의 입력 검사·dry run·향후 인증 API 요청 |
 
@@ -36,7 +36,8 @@
 - 6개 매체(GTM, Google Ads, Naver WCS, 당근, Meta, TikTok)의 공통 태그와 전환 이벤트 설정 추가·수정·비활성화·제거
 - 초안과 데모 게시본 비교, 메모리 내 게시·롤백 및 이력
 - 6개 매체의 공통/전환 설정을 저장 전에 검증하고 데모 게시 시 공개 DTO로 투영. 임의 코드 필드 거부
-- 공개 설정 형식 검증과 SDK 런타임 뼈대. 매체별 실제 태그 실행은 미구현
+- 공개 설정 형식 검증과 SDK 런타임 뼈대. Naver WCS·당근·Meta·TikTok 실행 어댑터는 미구현
+- GTM·Google Ads 직접 설치 어댑터의 태그 삽입·전환 호출 모의 테스트. 실제 랜딩과 광고 플랫폼 수신 검증은 미완료
 - 배포 사이트 등록 CLI의 dry run, 서버 등록 트랜잭션의 로컬 에뮬레이터 검증. 운영 등록 API는 미구현
 
 ## 기술 스택과 이유
@@ -77,6 +78,6 @@ apps/admin/src/lib/adminGateway.ts의 인터페이스를 회사 관리자 API �
 
 ## 보안 제한과 미구현 항목
 
-운영 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, CDN 게시, 6개 매체 어댑터, 실제 SDK 설치 진단은 아직 없습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 이 상태에서 운영 환경 배포나 실제 광고 전환 측정에 사용하면 안 됩니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
+운영 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, CDN 게시, 나머지 네 매체 어댑터, 실제 SDK 설치 진단은 아직 없습니다. GTM·Google Ads 어댑터도 실제 랜딩과 광고 플랫폼 수신 검증 전에는 운영 전환 측정에 사용하지 않습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
 
 설계·일정·운영 전 검증 항목은 docs/를 참조하세요.

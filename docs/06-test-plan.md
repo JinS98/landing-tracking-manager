@@ -24,6 +24,8 @@
 
 현재 `npm test`(Node.js 22.14+)는 메모리 데모·일괄 등록·설정 검증, 서버 접근 검사 조합 함수와 등록 CLI의 모의 구현 시나리오를 검사합니다. 8일차에는 6개 매체 계약, 잘못된 AW/`send_to`, Naver 유입 도메인 누락, 임의 코드 필드 거부, 초안·공개 DTO 검증 일치를 확인했습니다. 모의 테스트는 실제 회사 게이트웨이나 HTTP API의 보안 검증을 뜻하지 않습니다.
 
+9일차에는 GTM·Google Ads 어댑터의 단독/동시 로드, 기존 dataLayer·gtag·스크립트 재사용, 잘못된 전역 객체 거부, SDK의 동일 eventId 중복 전환 차단을 모의 DOM에서 확인했습니다. 이 테스트는 Tag Assistant나 광고 플랫폼 수신 결과를 검증하지 않습니다.
+
 ## 서버 구현 후 자동화
 
 - [ ] 익명·권한 없는 관리자 API 쓰기/게시/롤백 401/403
@@ -41,7 +43,7 @@
 
 - [ ] 6개 매체 공통 로더와 전환 어댑터의 공식 API 및 진단 도구 확인
 - [ ] 참고 코드 확인: app/layout.tsx의 next/script, 완료 페이지의 Google Ads·Meta 호출, mleverage.client.js, Naver WCS 스니펫을 원본과 대조
-- [ ] 실제 저장소 코드 확인: 신규 SDK의 /complete 감지·sessionStorage 중복 키·어댑터 미구현 상태 확인
+- [x] 실제 저장소 코드 확인: 신규 SDK의 /complete 감지·sessionStorage 중복 키와 선택적 GTM·Ads 어댑터 소스 확인
 - [ ] 운영 환경 검증 필요: GTM 컨테이너 내부 태그·트리거, Naver WCS trans/cnv 버전, 실제 플랫폼 이벤트 수신
 - [ ] GTM/Google Ads dataLayer 충돌과 기존 하드코딩/GTM 내부 태그 중복 방지
 - [ ] Next.js 초기 로드, pushState/replaceState/popstate와 /complete?token 진입

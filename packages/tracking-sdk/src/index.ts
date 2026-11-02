@@ -1,4 +1,5 @@
 import { parsePublishedConfig, type CommonTag, type ConversionTag, type Provider, type PublishedConfig } from '@ltm/tracking-core';
+export { createGtmAdapter, createGoogleAdsAdapter, type GoogleAdapterEnvironment } from './adapters/google.ts';
 
 export type ProviderAdapter = {
   load(tag: CommonTag): Promise<void> | void;
@@ -21,12 +22,13 @@ const digest = (value: string) => {
   return (hash >>> 0).toString(36);
 };
 
-/** Browser runtime only. No built-in provider scripts are shipped until tested adapters are approved. */
+/** Browser runtime. Provider adapters are opt-in so each site's existing tags can be reconciled first. */
 export class TrackingSdk {
   private config: PublishedConfig | null = null;
   private started: Promise<void> | null = null;
   private restoreRoutes: (() => void) | null = null;
-  constructor(private readonly options: TrackingSdkOptions) {}
+  private readonly options: TrackingSdkOptions;
+  constructor(options: TrackingSdkOptions) { this.options = options; }
 
   start(): Promise<void> {
     this.started ??= this.initialize();
@@ -40,7 +42,7 @@ export class TrackingSdk {
       const registry = this.registry();
       for (const tag of this.config.common.filter(item => item.enabled)) {
         const key = this.options.siteId + ':' + tag.provider + ':' + tag.trackingId;
-        if (registry.has(key) || this.hasExistingScript(tag)) continue;
+        if (registry.has(key)) continue;
         const adapter = this.options.adapters[tag.provider];
         if (!adapter) continue;
         try { await adapter.load(tag); registry.add(key); }
@@ -72,11 +74,6 @@ export class TrackingSdk {
     const shared = window as unknown as Record<string, Set<string>>;
     shared[globalKey] ??= new Set<string>();
     return shared[globalKey];
-  }
-
-  private hasExistingScript(tag: CommonTag): boolean {
-    return Array.from(document.querySelectorAll('script')).some(script =>
-      script.dataset.ltmTrackingId === tag.trackingId || Boolean(script.src && script.src.includes(encodeURIComponent(tag.trackingId))));
   }
 
   private observeRoutes(): void {

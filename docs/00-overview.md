@@ -8,8 +8,8 @@
 
 - 관리자: 가상 업체/다중 사이트 검색·선택, siteId 중복 방지 데모 등록, `.xlsx` 일괄 등록 미리보기·메모리 importJobs, 6개 매체 설정 편집, 초안/데모 게시/롤백/이력, 대시보드
 - 공통 패키지: 초안·공개 게시 설정 타입, 매체별 입력 검증, 공개 DTO 투영
-- SDK: 게시 설정 fetch, 제한된 재시도, 중복 시도 방지, Next.js식 History 이동 감지, /complete?token 감지, 어댑터 주입 인터페이스
-- 서버/CLI: 사이트 등록 Firestore 트랜잭션과 배포 CLI는 로컬 검증됨. 일괄 등록 서버 API·CDN·매체별 어댑터·실제 진단은 미구현
+- SDK: 게시 설정 fetch, 제한된 재시도, 중복 시도 방지, Next.js식 History 이동 감지, /complete?token 감지, 어댑터 주입 인터페이스와 선택적 GTM·Google Ads 어댑터. 실제 랜딩 검증은 미완료
+- 서버/CLI: 사이트 등록 Firestore 트랜잭션과 배포 CLI는 로컬 검증됨. 일괄 등록 서버 API·CDN·나머지 네 매체 어댑터·실제 진단은 미구현
 
 데모 게시본은 브라우저 메모리에서만 유지되고 SDK 공개 API로 제공되지 않습니다. 화면의 SDK 상태는 가상 값이며 실제 설치 확인이 아닙니다.
 
@@ -42,7 +42,7 @@ MVP 로그인 UI, 직원별 업체 권한 관리 UI, 임의 JavaScript 실행, M
 | 상태 | 내용 |
 |---|---|
 | 참고 코드 확인 | 사용자 제공 사례: Next.js + TypeScript 랜딩, app/layout.tsx의 next/script 공통 태그, mleverage.client.js, /complete?token 이동, 완료 페이지의 sessionStorage 중복 방지 및 Google Ads·Meta 전환 호출, Naver WCS 사용 경험. 원본 코드는 이번 작업에서 열지 않았다. |
-| 실제 저장소 코드 확인 | 이 저장소의 관리자 데모·tracking-core·tracking-sdk 소스를 직접 확인했다. 실제 랜딩, 완료 페이지, 매체 어댑터는 포함되지 않는다. |
+| 실제 저장소 코드 확인 | 이 저장소의 관리자 데모·tracking-core·tracking-sdk와 GTM·Ads 어댑터 소스를 직접 확인했다. 실제 랜딩과 완료 페이지는 포함되지 않는다. |
 | 운영 환경 검증 필요 | 현재 운영 랜딩의 설치 경로와 문의 성공 조건, GTM 내부 태그·트리거, Naver WCS 호출 버전, 광고 플랫폼 수신 결과. |
 
 기존 랜딩의 태그 위치와 문의 성공 조건을 운영 코드와 대조하기 전에는 어댑터 구현이나 태그 교체를 완료로 표시하지 않습니다. 상세 조사표와 중복 실행을 막는 이전 순서는 [1일차 기록](daily/day-01.md)에 있습니다.
