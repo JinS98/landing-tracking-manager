@@ -8,7 +8,7 @@ export interface AdminGateway {
   getDraft(siteId: string): Promise<TrackingConfig>;
   saveDraft(config: TrackingConfig, expectedVersion: number): Promise<TrackingConfig>;
   publish(siteId: string, expectedVersion: number): Promise<TrackingRelease>;
-  rollback(siteId: string, targetVersion: number): Promise<TrackingRelease>;
+  rollback(siteId: string, targetVersion: number, expectedPublishedVersion: number): Promise<TrackingRelease>;
   listAudit(siteId: string): Promise<AuditEntry[]>;
 }
 

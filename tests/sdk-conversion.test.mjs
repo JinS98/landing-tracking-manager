@@ -160,7 +160,7 @@ test('admin demo draft and publish produce the config loaded by SDK before compl
   const registered = registerSite(structuredClone(initialWorkspace),
     { id: siteId, companyId: 'sample-coffee', domain: 'day15.example' });
   const drafted = saveDraft(registered, { siteId, version: 0, common: [common], conversions: [conversion] });
-  const release = publishDraft(drafted, siteId).releases[0].publicConfig;
+  const release = publishDraft(drafted, siteId, 1).releases[0].publicConfig;
   await withBrowser(siteId, '/', async ({ history }) => {
     let loaded = 0;
     let converted = 0;

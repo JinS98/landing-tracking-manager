@@ -33,7 +33,7 @@ test('six providers can be added and published with their distinct common and co
   assert.equal(config(state).version, 12);
   assert.equal(state.audit.filter(entry => entry.siteId === siteId && entry.action === 'draft').length, 12);
   assert.match(state.audit[0].summary, /전환 이벤트 추가/);
-  const release = publishDraft(state, siteId).releases[0].publicConfig;
+  const release = publishDraft(state, siteId, 12).releases[0].publicConfig;
   assert.equal(release.common.length, 6);
   assert.equal(release.conversions.length, 6);
   assert.deepEqual(release.conversions.map(item => item.provider), events.map(item => item.provider));

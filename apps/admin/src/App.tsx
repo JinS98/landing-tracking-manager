@@ -5,7 +5,7 @@ import ImportPage from './ImportPage';
 import { demoMode } from './lib/firebase';
 import { initialWorkspace, providerLabels } from './lib/demoData';
 import { searchCompanies } from './lib/companySearch';
-import { editScript, publishDraft, registerSite, rollbackRelease, type ScriptEdit } from './lib/demoWorkspace';
+import { diffDraftScripts, editScript, publishDraft, registerSite, rollbackRelease, type ScriptEdit } from './lib/demoWorkspace';
 import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type Site, type TrackingConfig } from './types/tracking';
 
 const providers = Object.keys(providerLabels) as Provider[];
@@ -152,18 +152,21 @@ function SiteDetail({ workspace, setWorkspace }: { workspace: DemoWorkspace; set
   const config = workspace.drafts.find(item => item.siteId === siteId) ?? emptyConfig(siteId);
   const releases = workspace.releases.filter(item => item.siteId === siteId);
   const latest = releases[0];
-  const changed = JSON.stringify({ common: config.common, conversions: config.conversions }) !== JSON.stringify({ common: latest?.config.common ?? [], conversions: latest?.config.conversions ?? [] });
+  const changes = diffDraftScripts(config, latest?.config);
+  const changed = !latest || changes.length > 0;
+  const canPublish = workspace.drafts.some(item => item.siteId === siteId) && changed;
   const [error, setError] = useState('');
   if (!site) return <div className="panel empty">존재하지 않는 사이트입니다.</div>;
-  function publish() { try { setWorkspace(publishDraft(workspace, siteId)); setError(''); } catch (reason) { setError((reason as Error).message); } }
-  function rollback(version: number) { try { setWorkspace(rollbackRelease(workspace, siteId, version)); setError(''); } catch (reason) { setError((reason as Error).message); } }
+  function publish() { try { setWorkspace(publishDraft(workspace, siteId, config.version)); setError(''); } catch (reason) { setError((reason as Error).message); } }
+  function rollback(version: number) { try { setWorkspace(rollbackRelease(workspace, siteId, version, latest?.version ?? 0)); setError(''); } catch (reason) { setError((reason as Error).message); } }
   return <>
     <div className="page-head"><div><NavLink className="back" to={company ? '/companies/' + company.id : '/sites'}>← {company ? company.name : '업체 목록'}</NavLink><h1>{company?.name} · {site.id}</h1><p>{site.domain} · {site.environment} · 초안 v{config.version} · {latest ? '데모 게시 v' + latest.version : '게시본 없음'}</p></div><button className="btn secondary" onClick={() => navigator.clipboard.writeText(JSON.stringify(config, null, 2))}>초안 JSON 복사</button></div>
     <div className="notice"><b>데모 전용</b> — 게시와 롤백도 브라우저 메모리에서만 실행됩니다. Firebase, CDN 및 광고 매체에는 반영되지 않습니다.</div>
     <ScriptEditor key={siteId} config={config} onChange={edit => setWorkspace(editScript(workspace, siteId, edit))}/>
-    <div className="panel section-gap"><div className="panel-head"><h2>설정 변경사항 미리보기</h2><span className={'pill ' + (changed ? 'amber' : 'green')}>{changed ? '게시본과 다름' : '변경 없음'}</span></div>
+    <div className="panel section-gap"><div className="panel-head"><h2>설정 변경사항 미리보기</h2><span className={'pill ' + (changed ? 'amber' : 'green')}>{!latest ? '게시본 없음' : changed ? '게시본과 다름' : '변경 없음'}</span></div>
+      <div className="change-summary">{changes.length ? <ul>{changes.map((item, index) => <li key={`${item.kind}-${item.provider}-${index}`}>{item.kind === 'common' ? '공통 스크립트' : '전환 이벤트'} · {providerLabels[item.provider]} · {item.action === 'add' ? '추가' : item.action === 'update' ? '수정' : '제거'}</li>)}</ul> : <span>{latest ? '게시본과 같은 설정입니다.' : '초안에 등록된 설정이 없습니다.'}</span>}</div>
       <div className="preview-grid"><div><h3>현재 초안</h3><pre>{JSON.stringify(config, null, 2)}</pre></div><div><h3>마지막 공개 DTO (데모)</h3><pre>{latest ? JSON.stringify(latest.publicConfig, null, 2) : '게시본 없음'}</pre></div></div>
-      <div className="panel-actions"><button className="btn primary" onClick={publish} disabled={!changed}>데모 게시</button></div>{error && <p className="error panel-actions">{error}</p>}
+      <div className="panel-actions"><button className="btn primary" onClick={publish} disabled={!canPublish}>데모 게시</button></div>{error && <p className="error panel-actions" role="alert">{error}</p>}
     </div>
     <div className="panel section-gap"><div className="panel-head"><h2>데모 릴리스 이력</h2></div>{releases.length ? <ul className="history-list">{releases.map(release => <li key={release.id}><div><b>v{release.version}{release.sourceVersion ? ' · v' + release.sourceVersion + '에서 롤백' : ''}</b><span>{dateText(release.publishedAt)}</span></div><button className="btn secondary" onClick={() => rollback(release.version)} disabled={release.id === latest?.id}>이 버전으로 롤백</button></li>)}</ul> : <p className="empty">데모 게시 이력이 없습니다.</p>}</div>
   </>;

@@ -5,15 +5,19 @@
     npm run typecheck
     npm run build
     npm test
+    npm run test:ui
     npm run test:rules
     npm run test:registration
     npm run test:public-config
+    npm run test:release
 
 `npm run test:rules`는 Firebase CLI와 Java 21이 설치된 환경에서 로컬 Firestore 에뮬레이터를 시작합니다. `demo-` 프로젝트만 사용하고 실제 Firebase에 접속하지 않습니다. 현재 익명 REST의 여섯 컬렉션 조회·목록·생성·수정·삭제 및 중첩 경로 거부 테스트 7개가 통과했습니다. 인증된 클라이언트, 서버 IAM, 실제 Rules 배포와 인덱스 빌드는 검증되지 않았습니다.
 
 `npm run test:registration`은 같은 `demo-` 에뮬레이터에서 서버 전용 등록 트랜잭션의 동일 입력 재시도, 도메인·업체·환경 충돌, 기존 초안 보존, 동시 요청, 자격 증명 검사 계약을 시험합니다. 실제 배포 주체 검증기·HTTP API·운영 IAM은 시험하지 않습니다.
 
 `npm run test:public-config`는 `demo-` 에뮬레이터에서 게시 포인터와 불변 릴리스 조회, Firestore Timestamp 변환, 릴리스 누락 오류를 시험합니다. `npm test`의 로컬 HTTP 테스트는 공개 DTO만 반환하는지, siteId·CORS·ETag·304·캐시 재검증을 시험합니다. 실제 배포 서버와 CDN은 검증하지 않습니다.
+
+`npm run test:release`는 같은 에뮬레이터에서 접근 검사 누락 거부, 초안 버전 충돌, 변경 없는 게시 거부, 동시 쓰기, 불변 릴리스와 새 번호로 롤백, 공개 조회 포인터 갱신을 시험합니다. 실제 회사 게이트·관리자 HTTP·CDN은 시험하지 않습니다.
 
 13일차 SDK 초기화 테스트는 잘못된 siteId·게시 응답, 404, 오프라인, 응답/본문 지연, 동시 SDK 삽입, 동의 거부, 일부 어댑터 실패가 태그 실행과 전환 호출에 미치는 영향을 모의 브라우저에서 확인합니다.
 
@@ -40,7 +44,8 @@
 - [ ] 인증된 브라우저의 직접 접근 거부와 운영 Rules 배포 상태 확인
 - [x] 로컬 Firestore 에뮬레이터에서 siteId 중복·동시 요청·초안 보존 검증
 - [ ] 실제 인증된 등록 API와 배포 파이프라인, 운영 Firestore에서 동일 시나리오 검증
-- [ ] expectedVersion 충돌 409, 릴리스 버전 단조 증가, 롤백 새 버전 생성
+- [x] 로컬 에뮬레이터에서 expectedVersion 충돌 409, 릴리스 버전 단조 증가, 롤백 새 버전 생성
+- [ ] 운영 관리자 HTTP와 회사 인증 게이트를 통한 동일 시나리오 검증
 - [x] 로컬 공개 HTTP 핸들러는 게시본만 반환하고 비밀/초안/감사 정보 제외
 - [ ] CDN ETag/TTL/무효화, 게시 실패 시 이전 버전 유지
 

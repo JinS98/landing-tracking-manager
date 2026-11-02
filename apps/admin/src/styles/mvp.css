@@ -25,6 +25,9 @@
 .history-list li:last-child{border-bottom:0}
 .history-list b{display:block;color:#273449}
 .history-list span{display:block;color:#8993a6;font-size:12px;margin-top:6px}
+.change-summary{padding:16px 24px 0;color:#58677c;font-size:12px}
+.change-summary ul{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0;padding:0}
+.change-summary li{border:1px solid #dfe5f2;background:#f7f9ff;border-radius:7px;padding:7px 10px}
 .preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:20px 24px}
 .preview-grid h3{font-size:13px;margin:0 0 10px}
 .preview-grid pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9fc;border:1px solid #e8ecf2;border-radius:8px;padding:14px;min-height:120px;max-height:300px;overflow:auto;font-size:11px}

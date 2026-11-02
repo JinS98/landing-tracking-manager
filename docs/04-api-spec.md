@@ -1,6 +1,6 @@
 # API 명세
 
-12일차에 `GET /tracking-config?siteId=...`의 독립 HTTP 핸들러와 Firestore 게시본 리더를 구현했습니다. 서버에 마운트하거나 배포하는 진입점은 아직 없으며 관리자 데모는 서버 요청을 보내지 않습니다. 아래 관리자 계약은 기존 회사 관리자 인증 게이트웨이와 서버 검증기를 연결한 후 구현합니다. `functions/src/access.ts`에는 HTTP 라우트가 아닌 접근 검사 조합 함수만 있습니다.
+12일차에 `GET /tracking-config?siteId=...`의 독립 HTTP 핸들러와 Firestore 게시본 리더를 구현했습니다. 서버에 마운트하거나 배포하는 진입점은 아직 없으며 관리자 데모는 서버 요청을 보내지 않습니다. 아래 관리자 HTTP 계약은 기존 회사 관리자 인증 게이트웨이와 서버 검증기를 연결한 후 구현합니다. 서버 내부 초안·게시·롤백 트랜잭션은 17일차에 로컬 에뮬레이터로 검증했습니다. `functions/src/access.ts`에는 HTTP 라우트가 아닌 접근 검사 조합 함수만 있습니다.
 
 ## 운영자 인증·인가 계약
 
@@ -19,12 +19,18 @@
 | GET /admin/sites/{siteId}/draft | siteId | 사이트 조회 권한 확인 후 비공개 초안 반환 |
 | POST /admin/sites | siteId, companyId, domain, environment | siteId 고유 확인, 멱등 등록, 기존 설정 보존 |
 | PUT /admin/sites/{siteId}/draft | expectedVersion, common, conversions | 매체별 검증, 버전 충돌 검사 |
-| POST /admin/sites/{siteId}/publish | expectedVersion | 원자적 릴리스 생성, 공개 JSON 배포 |
-| POST /admin/sites/{siteId}/rollback | targetVersion | 이전 내용을 새 릴리스로 게시 |
+| POST /admin/sites/{siteId}/publish | expectedVersion (`draftVersion`) | 원자적 릴리스 생성 및 공개 포인터 갱신. CDN 배포는 미구현 |
+| POST /admin/sites/{siteId}/rollback | targetVersion, expectedPublishedVersion | 이전 내용을 새 릴리스로 게시 |
 | GET /admin/sites/{siteId}/history | cursor | 권한 확인 후 감사/릴리스 조회 |
 | POST /admin/imports/preview | `.xlsx` 파일, 열 매핑 | 관리자 접근 검사 후 서버가 파일과 각 행을 재검증하고 등록·건너뜀·오류 미리보기 반환. 미구현 |
 | POST /admin/imports | `.xlsx` 파일, 열 매핑, 미리보기 digest | 관리자 접근 검사 후 파일·매핑을 다시 검증, importJobs 멱등 선점과 행별 트랜잭션 처리. 미구현 |
 | GET /admin/imports/{jobId} | 작업 ID | 관리자 접근 검사 후 상태·건수·행별 오류 조회. 미구현 |
+
+## 17일차 서버 전용 게시 계약
+
+`functions/src/releaseWorkflow.ts`에는 초안 저장·게시·롤백 트랜잭션을 구현했습니다. 이 함수는 HTTP 라우트가 아니며, `requireAdminAccess`의 검증기·CSRF·사이트 범위 인가가 주어지지 않으면 실행을 거부합니다. `saveAdminDraft`는 요청 초안의 `version`과 `expectedVersion`, 저장된 `draftVersion`을 비교합니다. `publishAdminDraft`는 현재 초안 버전과 마지막 게시본 내용을 비교해 버전 충돌 또는 변경 없는 게시를 409로 거부합니다. `rollbackAdminRelease`는 `expectedPublishedVersion`과 포인터를 비교하고 대상 내용을 새 릴리스 번호로 복사합니다. 릴리스 생성·포인터/초안 갱신·감사 로그는 각 Firestore 트랜잭션 안에서 원자적으로 처리합니다.
+
+공개 설정 핸들러는 포인터가 가리키는 릴리스로 ETag를 계산하고 TTL 0초로 매 요청 재검증합니다. 따라서 현재 원본 서버에는 별도 CDN 무효화가 필요하지 않습니다. 정적 JSON이나 양수 CDN TTL을 도입하면 버전별 결과물을 먼저 업로드하고 포인터 전환 후 재검증 또는 purge 결과를 확인해야 합니다. 업로드·purge는 Firestore 트랜잭션 안에서 실행하지 않으며, 실패 상태를 기록하고 이전 공개본 유지 또는 롤백 절차를 운영 설계에서 확정해야 합니다.
 
 ## 배포 주체 등록 계약
 

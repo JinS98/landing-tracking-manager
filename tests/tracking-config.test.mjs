@@ -47,7 +47,7 @@ test('Naver requires an inflow domain and arbitrary code fields are rejected', (
 });
 
 test('demo release stores a separate validated public DTO', () => {
-  const first = publishDraft(structuredClone(initialWorkspace), 'coffee-main');
+  const first = publishDraft(structuredClone(initialWorkspace), 'coffee-main', 0);
   const release = first.releases[0];
   assert.equal(release.publicConfig.releaseVersion, release.version);
   assert.equal(release.publicConfig.siteId, release.siteId);

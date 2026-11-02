@@ -1,5 +1,5 @@
 import { parseDraftConfig, projectPublishedConfig } from '@ltm/tracking-core';
-import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Site, type TrackingConfig, type TrackingRelease } from '../types/tracking.ts';
+import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type Site, type TrackingConfig, type TrackingRelease } from '../types/tracking.ts';
 
 export type ScriptEdit =
   | { kind: 'common'; action: 'add' | 'update'; item: CommonScript }
@@ -54,10 +54,34 @@ export function editScript(state: DemoWorkspace, siteId: string, edit: ScriptEdi
   return saveDraft(state, next, `${edit.kind === 'common' ? '공통 스크립트' : '전환 이벤트'} ${action} (${provider})`);
 }
 
-export function publishDraft(state: DemoWorkspace, siteId: string): DemoWorkspace {
+export type DraftChange = { kind: 'common' | 'conversion'; provider: Provider; action: 'add' | 'update' | 'remove' };
+
+export function diffDraftScripts(draft: TrackingConfig, published?: TrackingConfig): DraftChange[] {
+  const changes: DraftChange[] = [];
+  for (const kind of ['common', 'conversion'] as const) {
+    const current = kind === 'common' ? draft.common : draft.conversions;
+    const previous = kind === 'common' ? published?.common ?? [] : published?.conversions ?? [];
+    const oldById = new Map(previous.map(item => [item.id, item]));
+    const newIds = new Set(current.map(item => item.id));
+    for (const item of current) {
+      const old = oldById.get(item.id);
+      if (!old) changes.push({ kind, provider: item.provider, action: 'add' });
+      else if (JSON.stringify(item) !== JSON.stringify(old)) changes.push({ kind, provider: item.provider, action: 'update' });
+    }
+    for (const item of previous) if (!newIds.has(item.id)) changes.push({ kind, provider: item.provider, action: 'remove' });
+  }
+  return changes;
+}
+
+const sameScripts = (left: TrackingConfig, right: TrackingConfig): boolean => diffDraftScripts(left, right).length === 0;
+
+export function publishDraft(state: DemoWorkspace, siteId: string, expectedDraftVersion: number): DemoWorkspace {
   if (!state.sites.some(site => site.id === siteId)) throw new Error('존재하지 않는 사이트는 게시할 수 없습니다.');
   const draft = state.drafts.find(item => item.siteId === siteId);
   if (!draft) throw new Error('게시할 초안이 없습니다.');
+  if (draft.version !== expectedDraftVersion) throw new Error('초안 버전이 변경되었습니다. 다시 확인하세요.');
+  const latest = state.releases.find(item => item.siteId === siteId);
+  if (latest && sameScripts(draft, latest.config)) throw new Error('게시본과 같은 내용입니다. 변경 후 게시하세요.');
   const version = Math.max(0, ...state.releases.filter(item => item.siteId === siteId).map(item => item.version)) + 1;
   const publishedAt = stamp();
   const publicConfig = projectPublishedConfig(draft, siteId, version, publishedAt);
@@ -68,10 +92,13 @@ export function publishDraft(state: DemoWorkspace, siteId: string): DemoWorkspac
   };
 }
 
-export function rollbackRelease(state: DemoWorkspace, siteId: string, targetVersion: number): DemoWorkspace {
+export function rollbackRelease(state: DemoWorkspace, siteId: string, targetVersion: number, expectedPublishedVersion: number): DemoWorkspace {
   if (!state.sites.some(site => site.id === siteId)) throw new Error('존재하지 않는 사이트는 롤백할 수 없습니다.');
+  const latest = state.releases.find(item => item.siteId === siteId);
+  if (!latest || latest.version !== expectedPublishedVersion) throw new Error('게시 버전이 변경되었습니다. 다시 확인하세요.');
   const target = state.releases.find(item => item.siteId === siteId && item.version === targetVersion);
   if (!target) throw new Error('선택한 버전을 찾지 못했습니다.');
+  if (sameScripts(latest.config, target.config)) throw new Error('현재 게시본과 같은 내용입니다.');
   const version = Math.max(...state.releases.filter(item => item.siteId === siteId).map(item => item.version)) + 1;
   const publishedAt = stamp();
   const release: TrackingRelease = {

@@ -57,3 +57,37 @@ test('admin browser editor adds, edits, toggles, removes and publishes demo scri
     await server.close();
   }
 });
+
+test('browser preview shows a change and rollback creates a new immutable demo release', async () => {
+  const server = await createServer({
+    root: resolve('apps/admin'),
+    configFile: resolve('apps/admin/vite.config.ts'),
+    server: { host: '127.0.0.1', port: 0 },
+  });
+  let browser;
+  try {
+    await server.listen();
+    const address = server.httpServer?.address();
+    if (!address || typeof address === 'string') throw new Error('Vite did not provide a local port');
+    browser = await chromium.launch({ channel: 'msedge', headless: true });
+    const page = await browser.newPage();
+    await page.goto(`http://127.0.0.1:${address.port}/sites/coffee-main`);
+    await page.getByRole('button', { name: '데모 게시' }).click();
+    await page.getByRole('button', { name: /전환 이벤트/ }).click();
+    await page.locator('.script-row').getByRole('button', { name: '수정' }).click();
+    await page.getByLabel('send_to (AW ID/라벨)').fill('AW-123456789/UPDATED');
+    await page.getByRole('button', { name: '수정 저장' }).click();
+    assert.match(await page.locator('.change-summary').innerText(), /전환 이벤트 · Google Ads · 수정/);
+    await page.getByRole('button', { name: '데모 게시' }).click();
+    assert.equal(await page.getByRole('button', { name: '데모 게시' }).isDisabled(), true);
+    await page.getByRole('button', { name: '이 버전으로 롤백' }).nth(1).click();
+    assert.match(await page.locator('.page-head').innerText(), /데모 게시 v3/);
+    assert.match(await page.locator('.preview-grid pre').last().innerText(), /DEMO_LABEL/);
+    assert.equal(await page.getByRole('button', { name: '데모 게시' }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: '이 버전으로 롤백' }).count(), 3);
+    await page.close();
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+});
