@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialWorkspace } from '../apps/admin/src/lib/demoData.ts';
+import { searchCompanies } from '../apps/admin/src/lib/companySearch.ts';
 import { publishDraft, registerSite, rollbackRelease, saveDraft } from '../apps/admin/src/lib/demoWorkspace.ts';
 import { parsePublishedConfig } from '../packages/tracking-core/src/index.ts';
 
@@ -10,6 +11,15 @@ test('siteId is unique across companies and registration preserves drafts', () =
   const next = registerSite(state, { id: 'new-site', companyId: 'sample-coffee', domain: 'new.example' });
   assert.equal(next.sites.filter(site => site.companyId === 'sample-coffee').length, 3);
   assert.deepEqual(next.drafts, state.drafts);
+});
+
+test('company search selects matching sites and a company keeps multiple demo landings', () => {
+  const first = registerSite(structuredClone(initialWorkspace), { id: 'coffee-promo', companyId: 'sample-coffee', domain: 'promo.coffee.example' });
+  const state = registerSite(first, { id: 'coffee-sale', companyId: 'sample-coffee', domain: 'sale.coffee.example' });
+  assert.equal(searchCompanies(state, '샘플 커피')[0].sites.length, 4);
+  assert.deepEqual(searchCompanies(state, 'COFFEE-PROMO')[0].sites.map(site => site.id), ['coffee-promo']);
+  assert.deepEqual(searchCompanies(state, 'sale.coffee.example')[0].sites.map(site => site.id), ['coffee-sale']);
+  assert.deepEqual(searchCompanies(state, '없는 업체'), []);
 });
 
 test('draft, publish and rollback keep release history immutable', () => {

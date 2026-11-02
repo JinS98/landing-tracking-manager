@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { NavLink, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Activity, Building2, Code2, History, LayoutDashboard, Plus, Search, ShieldCheck } from 'lucide-react';
 import { demoMode } from './lib/firebase';
 import { initialWorkspace, providerLabels } from './lib/demoData';
+import { searchCompanies } from './lib/companySearch';
 import { publishDraft, registerSite, rollbackRelease, saveDraft } from './lib/demoWorkspace';
-import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type TrackingConfig } from './types/tracking';
+import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type Site, type TrackingConfig } from './types/tracking';
 
 const providers = Object.keys(providerLabels) as Provider[];
 const menu = [
@@ -40,27 +41,31 @@ function Dashboard({ workspace }: { workspace: DemoWorkspace }) {
   </>;
 }
 
+function SiteTable({ sites, workspace }: { sites: Site[]; workspace: DemoWorkspace }) {
+  if (!sites.length) return <p className="empty">등록된 사이트가 없습니다.</p>;
+  return <div className="table-wrap"><table><thead><tr><th>siteId</th><th>도메인</th><th>SDK 상태</th><th>설정</th><th></th></tr></thead><tbody>{sites.map(site => <tr key={site.id}><td><strong>{site.id}</strong></td><td>{site.domain}</td><td><span className="pill gray">{site.sdkStatus === 'installed' ? '데모 설치 확인' : site.sdkStatus === 'unknown' ? '데모 미확인' : '데모 미설치'}</span></td><td>{workspace.releases.some(release => release.siteId === site.id) ? '데모 게시본 있음' : '게시본 없음'}</td><td><NavLink className="text-link" to={'/sites/' + site.id}>관리하기 →</NavLink></td></tr>)}</tbody></table></div>;
+}
+
 function Sites({ workspace, setWorkspace }: { workspace: DemoWorkspace; setWorkspace: (next: DemoWorkspace) => void }) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [companyId, setCompanyId] = useState(workspace.companies[0]?.id ?? '');
   const [siteId, setSiteId] = useState('');
   const [domain, setDomain] = useState('');
   const [error, setError] = useState('');
-  const visible = workspace.companies.filter(company => {
-    const text = [company.name, company.id, ...workspace.sites.filter(site => site.companyId === company.id).flatMap(site => [site.id, site.domain])].join(' ').toLowerCase();
-    return text.includes(search.toLowerCase());
-  });
+  const visible = searchCompanies(workspace, search);
   function addSite() {
     try {
       setWorkspace(registerSite(workspace, { id: siteId, companyId, domain }));
       setSiteId(''); setDomain(''); setError('');
+      navigate('/companies/' + companyId);
     } catch (reason) { setError((reason as Error).message); }
   }
   return <>
     <div className="page-head"><div><span className="eyebrow">ADVERTISERS</span><h1>업체 관리</h1><p>모든 가상 업체를 검색하고 업체별 랜딩페이지를 선택합니다.</p></div></div>
     <div className="panel"><div className="toolbar"><Search size={17}/><input aria-label="업체 또는 사이트 검색" value={search} onChange={event => setSearch(event.target.value)} placeholder="업체명, siteId, 도메인 검색"/></div>
-      {visible.map(company => <section className="company-section" key={company.id}><div className="panel-head"><h2>{company.name} <small>· {workspace.sites.filter(site => site.companyId === company.id).length}개 사이트</small></h2><span className={'pill ' + (company.status === 'active' ? 'green' : 'amber')}>{company.status === 'active' ? '활성' : '등록 대기'}</span></div>
-        <div className="table-wrap"><table><thead><tr><th>siteId</th><th>도메인</th><th>SDK</th><th>설정</th><th></th></tr></thead><tbody>{workspace.sites.filter(site => site.companyId === company.id).map(site => <tr key={site.id}><td><strong>{site.id}</strong></td><td>{site.domain}</td><td><span className="pill gray">{site.sdkStatus === 'installed' ? '설치 확인' : site.sdkStatus === 'unknown' ? '미확인' : '미설치'}</span></td><td>{workspace.releases.some(release => release.siteId === site.id) ? '데모 게시본 있음' : '게시본 없음'}</td><td><NavLink className="text-link" to={'/sites/' + site.id}>관리하기 →</NavLink></td></tr>)}</tbody></table></div>
+      {visible.map(({ company, sites }) => <section className="company-section" key={company.id}><div className="panel-head"><h2><NavLink className="company-link" to={'/companies/' + company.id}>{company.name}</NavLink> <small>· {workspace.sites.filter(site => site.companyId === company.id).length}개 사이트</small></h2><span className={'pill ' + (company.status === 'active' ? 'green' : 'amber')}>{company.status === 'active' ? '활성' : '등록 대기'}</span></div>
+        <SiteTable sites={sites} workspace={workspace}/>
       </section>)}
       {!visible.length && <p className="empty">검색 결과가 없습니다.</p>}
     </div>
@@ -68,7 +73,19 @@ function Sites({ workspace, setWorkspace }: { workspace: DemoWorkspace; setWorks
       <label>업체<select value={companyId} onChange={event => setCompanyId(event.target.value)}>{workspace.companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>
       <label>siteId<input value={siteId} onChange={event => setSiteId(event.target.value)} placeholder="new-landing"/></label>
       <label>도메인<input value={domain} onChange={event => setDomain(event.target.value)} placeholder="landing.example"/></label>
-    </div>{error && <p className="error">{error}</p>}<div className="editor-footer"><small>실제 자동 등록 CLI와 서버 API는 미구현입니다.</small><button className="btn primary" onClick={addSite}><Plus size={16}/> 데모 등록</button></div></div></div>
+    </div>{error && <p className="error">{error}</p>}<div className="editor-footer"><small>운영 등록 API는 연결되지 않았습니다.</small><button className="btn primary" onClick={addSite}><Plus size={16}/> 데모 등록</button></div></div></div>
+  </>;
+}
+
+function CompanyDetail({ workspace }: { workspace: DemoWorkspace }) {
+  const { companyId = '' } = useParams();
+  const company = workspace.companies.find(item => item.id === companyId);
+  if (!company) return <div className="panel empty">존재하지 않는 업체입니다.</div>;
+  const sites = workspace.sites.filter(site => site.companyId === companyId);
+  return <>
+    <div className="page-head"><div><NavLink className="back" to="/sites">← 업체 목록</NavLink><h1>{company.name}</h1><p>업체 ID: {company.id} · {sites.length}개 사이트 · {company.status === 'active' ? '활성' : '등록 대기'}</p></div></div>
+    <div className="notice"><b>데모 전용</b> — SDK 상태와 게시 현황은 브라우저 메모리의 가상 데이터입니다.</div>
+    <div className="panel"><div className="panel-head"><h2>랜딩페이지</h2></div><SiteTable sites={sites} workspace={workspace}/></div>
   </>;
 }
 
@@ -144,7 +161,7 @@ function SiteDetail({ workspace, setWorkspace }: { workspace: DemoWorkspace; set
   function publish() { try { setWorkspace(publishDraft(workspace, siteId)); setError(''); } catch (reason) { setError((reason as Error).message); } }
   function rollback(version: number) { try { setWorkspace(rollbackRelease(workspace, siteId, version)); setError(''); } catch (reason) { setError((reason as Error).message); } }
   return <>
-    <div className="page-head"><div><NavLink className="back" to="/sites">← 업체 목록</NavLink><h1>{company?.name} · {site.id}</h1><p>{site.domain} · {site.environment} · 초안 v{config.version} · {latest ? '데모 게시 v' + latest.version : '게시본 없음'}</p></div><button className="btn secondary" onClick={() => navigator.clipboard.writeText(JSON.stringify(config, null, 2))}>초안 JSON 복사</button></div>
+    <div className="page-head"><div><NavLink className="back" to={company ? '/companies/' + company.id : '/sites'}>← {company ? company.name : '업체 목록'}</NavLink><h1>{company?.name} · {site.id}</h1><p>{site.domain} · {site.environment} · 초안 v{config.version} · {latest ? '데모 게시 v' + latest.version : '게시본 없음'}</p></div><button className="btn secondary" onClick={() => navigator.clipboard.writeText(JSON.stringify(config, null, 2))}>초안 JSON 복사</button></div>
     <div className="notice"><b>데모 전용</b> — 게시와 롤백도 브라우저 메모리에서만 실행됩니다. Firebase, CDN 및 광고 매체에는 반영되지 않습니다.</div>
     <ScriptEditor config={config} onChange={next => setWorkspace(saveDraft(workspace, next))}/>
     <div className="panel section-gap"><div className="panel-head"><h2>설정 변경사항 미리보기</h2><span className={'pill ' + (changed ? 'amber' : 'green')}>{changed ? '게시본과 다름' : '변경 없음'}</span></div>
@@ -167,6 +184,7 @@ export default function App() {
   return <div className="shell"><Sidebar/><main className="main"><header className="topbar"><span>Workspace / Tracking</span><span className="demo-label">{demoMode ? 'DEMO MODE · 운영 쓰기 차단' : ''}</span></header><div className="content"><Routes>
     <Route path="/" element={<Dashboard workspace={workspace}/>}/>
     <Route path="/sites" element={<Sites workspace={workspace} setWorkspace={setWorkspace}/>}/>
+    <Route path="/companies/:companyId" element={<CompanyDetail workspace={workspace}/>}/>
     <Route path="/sites/:siteId" element={<SiteDetail workspace={workspace} setWorkspace={setWorkspace}/>}/>
     <Route path="/releases" element={<Releases workspace={workspace}/>}/>
     <Route path="/diagnostics" element={<Diagnostics/>}/>
