@@ -12,13 +12,13 @@ export type TrackingSdkOptions = {
   configUrl: string;
   adapters: Partial<Record<Provider, ProviderAdapter>>;
   hasConsent: () => boolean;
-  /** Return a stable event ID only after the server confirms this completion token. */
+  /** Optional extra validation for completion tokens. Return null to suppress conversion. */
   verifyCompletionToken?: (token: string) => Promise<{ eventId: string } | null>;
   onError?: (error: Error) => void;
   timeoutMs?: number;
 };
 
-const seenConversions = new Set<string>();
+const seenConversions = new WeakMap<Window, Set<string>>();
 const globalKey = '__ltmLoadedTags';
 const owners = new WeakMap<Window, Map<string, TrackingSdk>>();
 
@@ -163,9 +163,10 @@ export class TrackingSdk {
 
   private async checkCompleteRoute(): Promise<void> {
     const token = this.completionToken();
-    if (!token || !this.options.verifyCompletionToken) return;
+    if (!token) return;
     try {
-      const verified = await this.options.verifyCompletionToken(token);
+      const verified = this.options.verifyCompletionToken
+        ? await this.options.verifyCompletionToken(token) : { eventId: token };
       if (this.destroyed || this.completionToken() !== token) return;
       if (verified && typeof verified.eventId === 'string' && verified.eventId.length > 0 && verified.eventId.length <= 256) {
         await this.track('consultation_complete', { eventId: verified.eventId });
@@ -180,14 +181,16 @@ export class TrackingSdk {
         !input.eventId || input.eventId.length > 256) return;
     if (this.started) await this.started;
     if (this.destroyed || !this.config || !this.hasConsent()) return;
+    const seen = seenConversions.get(window) ?? new Set<string>();
+    seenConversions.set(window, seen);
     for (const tag of this.config.conversions.filter(item => item.enabled && item.event === event)) {
       if (!this.loadedProviders.has(tag.provider)) continue;
       const adapter = this.options.adapters[tag.provider];
       if (!adapter) continue;
-      const key = 'ltm:' + this.options.siteId + ':' + this.config.releaseVersion + ':' + tag.id + ':' + digest(input.eventId);
-      if (seenConversions.has(key)) continue;
+      const key = 'ltm:' + this.options.siteId + ':' + tag.id + ':' + digest(input.eventId);
+      if (seen.has(key)) continue;
       try { if (sessionStorage.getItem(key)) continue; sessionStorage.setItem(key, 'attempted'); } catch { /* memory fallback */ }
-      seenConversions.add(key);
+      seen.add(key);
       try { await adapter.convert(tag); } catch (error) { this.reportError(errorFrom(error)); }
     }
   }

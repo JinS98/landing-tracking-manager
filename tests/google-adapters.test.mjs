@@ -90,7 +90,10 @@ test('GTM and Ads coexist on one dataLayer; SDK dedupes each conversion by event
   const original = { window: globalThis.window, document: globalThis.document, history: globalThis.history,
     sessionStorage: globalThis.sessionStorage, fetch: globalThis.fetch };
   const stored = new Map();
-  const history = { pushState() {}, replaceState() {} };
+  const history = { pushState(_state, _unused, path) {
+    const url = new URL(path, 'https://landing.example/');
+    Object.assign(env.window.location, { href: url.href, pathname: url.pathname, search: url.search });
+  }, replaceState() {} };
   const published = projectPublishedConfig({ siteId: 'google-demo', version: 0, common: [gtm, ads], conversions: [gtmEvent, adsEvent] },
     'google-demo', 1, '2026-11-02T00:00:00Z');
   Object.assign(globalThis, {
@@ -108,9 +111,16 @@ test('GTM and Ads coexist on one dataLayer; SDK dedupes each conversion by event
     await sdk.track('consultation_complete', { eventId: 'first-submission' });
     assert.equal(layer.filter(item => item.event === 'lead_complete').length, 1);
     assert.equal(layer.filter(item => Array.from(item)[0] === 'event').length, 1);
-    await sdk.track('consultation_complete', { eventId: 'second-submission' });
+    history.pushState({}, '', '/complete?token=random-google-001');
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(layer.filter(item => item.event === 'lead_complete').length, 2);
     assert.equal(layer.filter(item => Array.from(item)[0] === 'event').length, 2);
+    history.pushState({}, '', '/complete?token=random-google-001');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(layer.filter(item => item.event === 'lead_complete').length, 2);
+    await sdk.track('consultation_complete', { eventId: 'second-submission' });
+    assert.equal(layer.filter(item => item.event === 'lead_complete').length, 3);
+    assert.equal(layer.filter(item => Array.from(item)[0] === 'event').length, 3);
     sdk.destroy();
   } finally { Object.assign(globalThis, original); }
 });

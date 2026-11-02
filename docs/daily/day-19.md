@@ -12,7 +12,7 @@
 - 문의 성공
 - 중복 태그 제거
 - 동의·성능
-- 기존 next/script·완료 페이지·mleverage.client.js와 신규 SDK의 매체별 실행 주체 검증
+- 기존 next/script·완료 페이지·GTM과 신규 SDK의 매체별 실행 주체 검증(문의·페이지뷰용 mleverage.client.js는 별도 확인)
 
 ## 수정 또는 생성할 파일
 

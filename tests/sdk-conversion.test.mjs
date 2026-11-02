@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { initialWorkspace } from '../apps/admin/src/lib/demoData.ts';
+import { publishDraft, registerSite, saveDraft } from '../apps/admin/src/lib/demoWorkspace.ts';
 import { projectPublishedConfig } from '../packages/tracking-core/src/index.ts';
 import { TrackingSdk } from '../packages/tracking-sdk/src/index.ts';
 
@@ -11,7 +13,7 @@ function published(siteId) {
     siteId, 1, '2026-11-02T00:00:00Z');
 }
 
-async function withBrowser(siteId, initialPath, run, fetchImpl) {
+async function withBrowser(siteId, initialPath, run, fetchImpl, stored = new Map()) {
   const previous = { window: globalThis.window, history: globalThis.history,
     sessionStorage: globalThis.sessionStorage, fetch: globalThis.fetch };
   const listeners = new Map();
@@ -28,7 +30,6 @@ async function withBrowser(siteId, initialPath, run, fetchImpl) {
     pushState(_state, _unused, path) { navigate(path); },
     replaceState(_state, _unused, path) { navigate(path); },
   };
-  const stored = new Map();
   Object.assign(globalThis, { window: win, history,
     sessionStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
     fetch: fetchImpl ?? (async () => ({ ok: true, json: async () => published(siteId) })) });
@@ -38,19 +39,21 @@ async function withBrowser(siteId, initialPath, run, fetchImpl) {
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
-test('a completion URL alone cannot fire a conversion; confirmed success can', async () => {
-  const siteId = 'manual-success';
-  await withBrowser(siteId, '/complete?token=unverified', async ({ history }) => {
+test('a random completion token fires once per session and manual tracking still works', async () => {
+  const siteId = 'random-token';
+  await withBrowser(siteId, '/complete?token=random-001', async ({ history }) => {
     let converted = 0;
     const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
       adapters: { googleAds: { load() {}, convert() { converted++; } } } });
     await sdk.start();
     await tick();
-    history.pushState({}, '', '/complete?token=unverified');
-    await tick();
-    assert.equal(converted, 0);
-    await sdk.track('consultation_complete', { eventId: 'server-confirmed-001' });
     assert.equal(converted, 1);
+    history.pushState({}, '', '/');
+    history.pushState({}, '', '/complete?token=random-001');
+    await tick();
+    assert.equal(converted, 1);
+    await sdk.track('consultation_complete', { eventId: 'server-confirmed-001' });
+    assert.equal(converted, 2);
     sdk.destroy();
   });
 });
@@ -148,6 +151,96 @@ test('invalid input, verifier errors and consent failures do not escape into the
     await tick();
     assert.equal(converted, 0);
     assert.deepEqual(errors, ['consent unavailable', 'verification unavailable']);
+    sdk.destroy();
+  });
+});
+
+test('admin demo draft and publish produce the config loaded by SDK before completion conversion', async () => {
+  const siteId = 'day15-site';
+  const registered = registerSite(structuredClone(initialWorkspace),
+    { id: siteId, companyId: 'sample-coffee', domain: 'day15.example' });
+  const drafted = saveDraft(registered, { siteId, version: 0, common: [common], conversions: [conversion] });
+  const release = publishDraft(drafted, siteId).releases[0].publicConfig;
+  await withBrowser(siteId, '/', async ({ history }) => {
+    let loaded = 0;
+    let converted = 0;
+    const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
+      adapters: { googleAds: {
+        load(tag) { assert.equal(tag.trackingId, common.trackingId); loaded++; },
+        convert(tag) { assert.equal(tag.sendTo, conversion.sendTo); converted++; },
+      } } });
+    await sdk.start();
+    assert.equal(loaded, 1);
+    assert.equal(converted, 0);
+    history.pushState({}, '', '/complete?token=random-admin-001');
+    await tick();
+    assert.equal(converted, 1);
+    sdk.destroy();
+  }, async () => ({ ok: true, json: async () => release }));
+});
+
+test('session key survives reload and release changes, while a separate tab has its own session', async () => {
+  const siteId = 'session-scope';
+  const token = 'random-session-001';
+  const stored = new Map();
+  let conversions = 0;
+  let version = 1;
+  const fetchConfig = async () => ({ ok: true, json: async () => ({ ...published(siteId), releaseVersion: version }) });
+  const open = async storage => withBrowser(siteId, `/complete?token=${token}`, async () => {
+    const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
+      adapters: { googleAds: { load() {}, convert() { conversions++; } } } });
+    await sdk.start();
+    await tick();
+    sdk.destroy();
+  }, fetchConfig, storage);
+  await open(stored);
+  assert.equal(conversions, 1);
+  version = 2;
+  await open(stored);
+  assert.equal(conversions, 1);
+  await open(new Map());
+  assert.equal(conversions, 2);
+});
+
+test('blocked loader and failed conversion report errors without retrying the same token', async () => {
+  const siteId = 'failed-tags';
+  const gtm = { id: 'gtm-common', provider: 'gtm', enabled: true, trackingId: 'GTM-DEMO123' };
+  const gtmEvent = { id: 'gtm-lead', provider: 'gtm', enabled: true, event: 'consultation_complete', eventName: 'lead_complete' };
+  const config = projectPublishedConfig({ siteId, version: 0, common: [common, gtm],
+    conversions: [conversion, gtmEvent] }, siteId, 1, '2026-11-02T00:00:00Z');
+  await withBrowser(siteId, '/complete?token=random-failed-001', async ({ history }) => {
+    const errors = [];
+    let convertCalls = 0;
+    const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
+      adapters: {
+        googleAds: { load() {}, convert() { convertCalls++; throw new Error('conversion blocked'); } },
+        gtm: { load() { throw new Error('script blocked'); }, convert() { throw new Error('must not convert'); } },
+      }, onError: error => errors.push(error.message) });
+    await sdk.start();
+    await tick();
+    history.pushState({}, '', '/');
+    history.pushState({}, '', '/complete?token=random-failed-001');
+    await tick();
+    assert.equal(convertCalls, 1);
+    assert.deepEqual(errors, ['script blocked', 'conversion blocked']);
+    sdk.destroy();
+  }, async () => ({ ok: true, json: async () => config }));
+});
+
+test('storage access failure falls back to tab memory for back-navigation dedupe', async () => {
+  const siteId = 'storage-blocked';
+  await withBrowser(siteId, '/complete?token=random-storage-001', async ({ history }) => {
+    globalThis.sessionStorage = { getItem() { throw new Error('storage blocked'); },
+      setItem() { throw new Error('storage blocked'); } };
+    let converted = 0;
+    const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
+      adapters: { googleAds: { load() {}, convert() { converted++; } } } });
+    await sdk.start();
+    await tick();
+    history.pushState({}, '', '/');
+    history.pushState({}, '', '/complete?token=random-storage-001');
+    await tick();
+    assert.equal(converted, 1);
     sdk.destroy();
   });
 });
