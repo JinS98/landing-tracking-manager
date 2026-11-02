@@ -1,5 +1,6 @@
 import { parsePublishedConfig, type CommonTag, type ConversionTag, type Provider, type PublishedConfig } from '@ltm/tracking-core';
 export { createGtmAdapter, createGoogleAdsAdapter, type GoogleAdapterEnvironment } from './adapters/google.ts';
+export { createNaverWcsAdapter, type NaverAdapterEnvironment } from './adapters/naver.ts';
 
 export type ProviderAdapter = {
   load(tag: CommonTag): Promise<void> | void;

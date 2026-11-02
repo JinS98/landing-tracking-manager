@@ -52,7 +52,9 @@ function parseTags(commonInput: unknown, conversionInput: unknown): { common: Co
     if (item.provider === 'googleAds' && (typeof item.sendTo !== 'string' || !/^AW-[0-9]+\/[A-Za-z0-9_-]+$/.test(item.sendTo))) {
       throw new Error('Google Ads send_to 형식이 올바르지 않습니다.');
     }
-    if (item.provider === 'naverWcs' && !safeId(item.conversionType)) throw new Error('Naver 전환 유형이 올바르지 않습니다.');
+    if (item.provider === 'naverWcs' && (!safeId(item.conversionType) || item.conversionType === 'purchase')) {
+      throw new Error('Naver 전환 유형이 올바르지 않습니다. 구매 전환에는 금액이 필요하며 현재 설정에서 지원하지 않습니다.');
+    }
     if (item.provider !== 'googleAds' && item.provider !== 'naverWcs' && !safeId(item.eventName)) throw new Error('전환 이벤트명이 올바르지 않습니다.');
     const matchingCommon = common.find(tag => tag.provider === item.provider);
     if (item.enabled && !matchingCommon?.enabled) throw new Error('활성 전환 이벤트에는 활성 공통 설정이 필요합니다.');

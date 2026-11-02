@@ -2,7 +2,7 @@
 
 ## 현재 코드 범위
 
-tracking-core는 초안과 공개 설정을 같은 매체별 규칙으로 검증하고, 데모 게시 시 공개 필드만 투영합니다. 허용되지 않은 필드가 있으면 읽기를 거부합니다. tracking-sdk는 게시 설정 로더, fetch 최대 2회, 타임아웃, 사이트별 태그 로딩 중복 방지, History API와 popstate 이동 감지, /complete?token 자동 이벤트, sessionStorage 중복 시도 방지, track('consultation_complete', { eventId }) 인터페이스를 제공합니다. 9일차에 GTM·Google Ads 어댑터를 **선택적 주입 모듈**로 추가했습니다. 실제 랜딩 수신 검증과 SDK 번들/배포는 아직 없습니다. 어댑터를 주입하지 않은 SDK는 광고 태그를 실행하지 않습니다.
+tracking-core는 초안과 공개 설정을 같은 매체별 규칙으로 검증하고, 데모 게시 시 공개 필드만 투영합니다. 허용되지 않은 필드가 있으면 읽기를 거부합니다. tracking-sdk는 게시 설정 로더, fetch 최대 2회, 타임아웃, 사이트별 태그 로딩 중복 방지, History API와 popstate 이동 감지, /complete?token 자동 이벤트, sessionStorage 중복 시도 방지, track('consultation_complete', { eventId }) 인터페이스를 제공합니다. GTM·Google Ads·Naver WCS 어댑터는 **선택적 주입 모듈**입니다. 실제 랜딩 수신 검증과 SDK 번들/배포는 아직 없습니다. 어댑터를 주입하지 않은 SDK는 광고 태그를 실행하지 않습니다.
 
 **실제 저장소 코드 확인:** 위 범위는 현재 tracking-core·tracking-sdk 소스에서 확인했다. **참고 코드 확인:** 사용자 제공 기존 랜딩 사례에는 app/layout.tsx의 next/script 공통 태그, mleverage.client.js, /complete?token 이동, 완료 페이지의 sessionStorage 중복 방지 및 Google Ads·Meta 전환 호출, Naver WCS 사용 경험이 포함된다. 원본 랜딩 코드를 이번 작업에서 열어 확인한 것은 아니다. **운영 환경 검증 필요:** 실제 설치 위치와 동작, GTM 내부 설정, Naver WCS 호출 버전, 플랫폼 수신 결과.
 
@@ -12,18 +12,20 @@ SDK는 siteId로 공개 게시본만 요청합니다. 응답은 schemaVersion=1�
 
 ## 어댑터 계약
 
-각 매체는 공통 태그 load와 전환 convert를 별도로 구현합니다. 설정에는 코드 대신 검증된 ID·이벤트명만 둡니다. GTM·Google Ads 어댑터는 소스와 모의 DOM 테스트가 있으며 Naver WCS·당근·Meta·TikTok은 구현 전입니다.
+각 매체는 공통 태그 load와 전환 convert를 별도로 구현합니다. 설정에는 코드 대신 검증된 ID·이벤트명만 둡니다. GTM·Google Ads·Naver WCS 어댑터는 소스와 모의 DOM 테스트가 있으며 당근·Meta·TikTok은 구현 전입니다.
 
 | 매체 | 공통 입력 | 전환 입력 | 검증 과제 |
 |---|---|---|---|
 | GTM | 컨테이너 ID | dataLayer 이벤트명 | 기존 컨테이너·noscript 처리 |
 | Google Ads | AW ID | send_to | dataLayer/gtag 공유와 중복 |
-| Naver WCS | WA ID, 유입 도메인 | 전환 유형 | 공식 로더와 도메인 정책 |
+| Naver WCS | WA ID, 쿠키 도메인 | 전환 유형(`purchase` 제외) | 기존 구형 태그와 플랫폼 수신 확인 |
 | 당근 Pixel | 픽셀 ID | 지원 이벤트명 | 공식 SDK API 확인 |
 | Meta Pixel | Pixel ID | 이벤트명 | 기존 fbq 확인 |
 | TikTok Pixel | Pixel ID | 이벤트명 | 기존 ttq 확인 |
 
 9일차 어댑터는 [GTM dataLayer 설치 예시](https://developers.google.com/tag-platform/tag-manager/datalayer), [Google tag 설치 예시](https://developers.google.com/tag-platform/gtagjs), [Google Ads 전환 이벤트 예시](https://developers.google.com/tag-platform/devguides/conversions)를 기준으로 구현했습니다. GTM은 기존 배열을 유지하고 컨테이너 스크립트와 `gtm.js` 초기 이벤트를 한 번만 추가합니다. 전환은 설정된 이벤트명을 `dataLayer.push({event: ...})`로 전달하며 실제 태그 발화는 GTM 컨테이너의 트리거 설정에 달려 있습니다. Google Ads는 기존 `gtag` 함수를 덮어쓰지 않고 AW ID의 `config`와 `gtag('event', 'conversion', {send_to})`를 호출합니다. 같은 AW 스크립트가 이미 있으면 새 스크립트와 `config`를 추가하지 않고, 다른 Google tag 스크립트가 있으면 기존 함수를 사용해 AW 목적지만 구성합니다. 모의 DOM에서만 검증했으며 외부 스크립트의 네트워크 로드·광고 플랫폼 수신은 확인하지 않았습니다.
+
+10일차 Naver 어댑터는 [네이버 `wcs.trans` 설치 가이드](https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/)에 따라 `wcslog.js` 로드 후 `wcs_add.wa` 설정, `wcs.inflow(inflowDomain)`, `wcs_do()`를 실행합니다. 전환은 `wcs.trans({type: conversionType})`로 별도 호출합니다. `inflowDomain`은 공식 가이드의 쿠키 도메인 값이며, 이 SDK는 현재 호스트가 해당 도메인 또는 하위 도메인일 때만 실행합니다. 현재 설정은 호스트만 허용하고 경로 단위 쿠키 도메인은 지원하지 않습니다. `purchase`는 필수 전환 금액 필드가 설정에 없으므로 게시 단계에서 거부합니다. 기존 `_nasa.cnv`가 보이면 충돌을 막지만, 인라인 코드나 GTM 안의 모든 구형 태그를 탐지할 수는 없습니다. 실제 랜딩의 WCS 버전과 실행 주체를 확인한 뒤 활성화해야 합니다. SPA 라우트별 PV 전송은 아직 구현하지 않았습니다.
 
 어댑터의 외부 스크립트 URL 검사는 동일한 직접 설치 태그의 중복 삽입을 줄이기 위한 것입니다. next/script의 모든 삽입 방식, 인라인 하드코딩 태그, mleverage.client.js 내부 동작, GTM 컨테이너 내부 태그까지 판별할 수 없습니다. 특히 GTM 컨테이너 안에 같은 Ads 전환이 있으면 직접 Ads 어댑터를 함께 활성화하지 않습니다. 배포 전 원본 코드·컨테이너 인벤토리와 실제 사이트 검증이 필수입니다.
 
