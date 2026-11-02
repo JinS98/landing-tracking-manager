@@ -101,6 +101,7 @@ test('SDK dedupes completion route revisit and distinct submissions', async () =
   });
   try {
     const sdk = new TrackingSdk({ siteId: 'naver-demo', configUrl: 'https://landing.example/config', hasConsent: () => true,
+      verifyCompletionToken: async token => ({ eventId: token }),
       adapters: { naverWcs: createNaverWcsAdapter(env) } });
     await sdk.start();
     await new Promise(resolve => setImmediate(resolve));

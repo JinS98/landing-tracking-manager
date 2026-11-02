@@ -152,7 +152,8 @@ test('SDK requires consent and dedupes social conversions on completion revisit'
     await denied.start();
     assert.equal(env.scripts.length, 0);
     consent = true;
-    const sdk = new TrackingSdk({ siteId: 'social-demo', configUrl: 'https://landing.example/config', adapters, hasConsent: () => consent });
+    const sdk = new TrackingSdk({ siteId: 'social-demo', configUrl: 'https://landing.example/config', adapters, hasConsent: () => consent,
+      verifyCompletionToken: async token => ({ eventId: token }) });
     await sdk.start();
     assert.equal(env.scripts.length, 3);
     await sdk.track('consultation_complete', { eventId: 'first-submission' });

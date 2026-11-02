@@ -38,7 +38,7 @@ tracking-core는 초안·공개 설정의 허용 필드·타입을 검증합니�
 
 **참고 코드 확인:** Next.js + TypeScript 랜딩의 app/layout.tsx에서 next/script로 공통 스크립트를 삽입하고, 문의 성공 뒤 /complete?token으로 이동해 완료 페이지에서 sessionStorage 중복 방지와 Google Ads·Meta Pixel 전환 호출을 사용한 사례가 있습니다. Naver WCS 공통·전환 사용 경험도 있습니다. 이 정보는 사용자 제공 사례이며 현재 저장소에서 직접 확인한 운영 코드가 아닙니다.
 
-**실제 저장소 코드 확인:** 신규 tracking-sdk에는 공개 설정 로더·History 이동 감지·/complete?token 감지·sessionStorage 시도 키와 선택적 6개 매체 어댑터가 있습니다. 기존 완료 페이지와 신규 SDK가 서로 다른 키를 쓰면 두 경로 모두 전환을 보낼 수 있습니다. 키 존재 여부만으로 중복 실행을 차단했다고 판단하지 않습니다.
+**실제 저장소 코드 확인:** 신규 tracking-sdk에는 공개 설정 로더·History 이동 감지·검증된 /complete?token 전환 감지·sessionStorage 시도 키와 선택적 6개 매체 어댑터가 있습니다. 기존 완료 페이지와 신규 SDK가 서로 다른 키를 쓰면 두 경로 모두 전환을 보낼 수 있습니다. 키 존재 여부만으로 중복 실행을 차단했다고 판단하지 않습니다.
 
 이전 순서는 다음과 같습니다.
 

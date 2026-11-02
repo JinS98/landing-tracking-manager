@@ -2,7 +2,7 @@
 
 ## 현재 코드 범위
 
-tracking-core는 초안과 공개 설정을 같은 매체별 규칙으로 검증하고, 데모 게시 시 공개 필드만 투영합니다. 허용되지 않은 필드가 있으면 읽기를 거부합니다. tracking-sdk는 게시 설정 로더, fetch 최대 2회, 타임아웃, 사이트별 태그 로딩 중복 방지, History API와 popstate 이동 감지, /complete?token 자동 이벤트, sessionStorage 중복 시도 방지, track('consultation_complete', { eventId }) 인터페이스를 제공합니다. 6개 매체 어댑터는 **선택적 주입 모듈**입니다. 실제 랜딩 수신 검증과 SDK 번들/배포는 아직 없습니다. 어댑터를 주입하지 않은 SDK는 광고 태그를 실행하지 않습니다.
+tracking-core는 초안과 공개 설정을 같은 매체별 규칙으로 검증하고, 데모 게시 시 공개 필드만 투영합니다. 허용되지 않은 필드가 있으면 읽기를 거부합니다. tracking-sdk는 게시 설정 로더, fetch 최대 2회, 타임아웃, 사이트별 태그 로딩 중복 방지, History API와 popstate 이동 감지, 검증된 /complete?token 전환 감지, sessionStorage 중복 시도 방지, track('consultation_complete', { eventId }) 인터페이스를 제공합니다. 6개 매체 어댑터는 **선택적 주입 모듈**입니다. 실제 랜딩 수신 검증과 SDK 번들/배포는 아직 없습니다. 어댑터를 주입하지 않은 SDK는 광고 태그를 실행하지 않습니다.
 
 **실제 저장소 코드 확인:** 위 범위는 현재 tracking-core·tracking-sdk 소스에서 확인했다. **참고 코드 확인:** 사용자 제공 기존 랜딩 사례에는 app/layout.tsx의 next/script 공통 태그, mleverage.client.js, /complete?token 이동, 완료 페이지의 sessionStorage 중복 방지 및 Google Ads·Meta 전환 호출, Naver WCS 사용 경험이 포함된다. 원본 랜딩 코드를 이번 작업에서 열어 확인한 것은 아니다. **운영 환경 검증 필요:** 실제 설치 위치와 동작, GTM 내부 설정, Naver WCS 호출 버전, 플랫폼 수신 결과.
 
@@ -37,7 +37,7 @@ SDK는 유효한 siteId로 공개 게시본만 요청합니다. 응답은 schema
 
 ## 전환 흐름
 
-실제 문의 성공 콜백에서 고유 eventId와 함께 track을 호출하는 방식이 목표입니다. **참고 코드 확인:** 기존 랜딩에서 문의 성공 후 /complete?token=...으로 이동하고 완료 페이지가 sessionStorage 토큰을 이용해 Google Ads·Meta 전환 호출을 중복 방지한 사례가 있습니다. **실제 저장소 코드 확인:** 신규 SDK는 /complete?token 진입 또는 Next.js식 client navigation을 감지하고 eventId 해시를 자체 sessionStorage 키에 기록합니다. 두 구현의 키가 다르면 모두 전환을 보낼 수 있으므로 키 중복 제거만으로 공존을 보장하지 않습니다. token은 접수 증명이 아니며 서버 검증을 대체하지 않습니다. 첫 전송 결과가 불명확할 수 있어 전환 전송은 자동 재시도하지 않습니다.
+실제 문의 성공 콜백에서 고유 eventId와 함께 track을 호출하는 방식이 목표입니다. **참고 코드 확인:** 기존 랜딩에서 문의 성공 후 /complete?token=...으로 이동하고 완료 페이지가 sessionStorage 토큰을 이용해 Google Ads·Meta 전환 호출을 중복 방지한 사례가 있습니다. **실제 저장소 코드 확인:** 신규 SDK는 초기 진입과 History 이동에서 정확한 /complete 경로의 단일 token을 감지합니다. URL만으로는 전환하지 않고, 호출자가 제공한 `verifyCompletionToken`이 서버 확인 후 안정적인 eventId를 반환한 경우에만 `track`을 호출합니다. 실제 문의 성공 콜백도 서버가 접수를 확정한 뒤 같은 eventId로 `track`을 호출해야 합니다. SDK는 eventId 해시를 자체 sessionStorage 키에 기록해 동일 접수의 중복 시도를 줄입니다. 두 구현의 키가 다르면 모두 전환을 보낼 수 있으므로 키 중복 제거만으로 공존을 보장하지 않습니다. 검증 함수가 없거나 token 검증이 실패하면 경로 기반 전환은 발생하지 않습니다. token 자체는 접수 증명이 아닙니다. 첫 전송 결과가 불명확할 수 있어 전환 전송은 자동 재시도하지 않습니다.
 
 이전 시에는 siteId·매체·이벤트별로 기존 완료 페이지/GTM/기존 SDK/신규 SDK 중 하나만 실행 주체로 둡니다. 신규 SDK는 어댑터 비활성 상태로 관찰한 뒤 테스트 환경에서 한 매체씩 기존 공통 태그와 전환 호출을 끄고 신규 어댑터를 켭니다. 운영용 공존 토글은 아직 구현되지 않았으며 자세한 이전·롤백 순서는 [아키텍처](01-architecture.md)에 기록했습니다.
 

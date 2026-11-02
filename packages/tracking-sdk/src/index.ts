@@ -12,6 +12,8 @@ export type TrackingSdkOptions = {
   configUrl: string;
   adapters: Partial<Record<Provider, ProviderAdapter>>;
   hasConsent: () => boolean;
+  /** Return a stable event ID only after the server confirms this completion token. */
+  verifyCompletionToken?: (token: string) => Promise<{ eventId: string } | null>;
   onError?: (error: Error) => void;
   timeoutMs?: number;
 };
@@ -67,10 +69,10 @@ export class TrackingSdk {
       this.config = null;
       this.loadedProviders.clear();
       this.config = await this.fetchConfig();
-      if (this.destroyed || !this.options.hasConsent()) return;
+      if (this.destroyed || !this.hasConsent()) return;
       const registry = this.registry();
       for (const tag of this.config.common.filter(item => item.enabled)) {
-        if (this.destroyed || !this.options.hasConsent()) return;
+        if (this.destroyed || !this.hasConsent()) return;
         const key = this.options.siteId + ':' + tag.provider + ':' + tag.trackingId;
         const adapter = this.options.adapters[tag.provider];
         if (!adapter) continue;
@@ -131,6 +133,11 @@ export class TrackingSdk {
     try { this.options.onError?.(error); } catch { /* diagnostics must not block the page */ }
   }
 
+  private hasConsent(): boolean {
+    try { return this.options.hasConsent(); }
+    catch (error) { this.reportError(errorFrom(error)); return false; }
+  }
+
   private registry(): Set<string> {
     const shared = window as unknown as Record<string, Set<string>>;
     shared[globalKey] ??= new Set<string>();
@@ -148,16 +155,31 @@ export class TrackingSdk {
     this.restoreRoutes = () => { history.pushState = push; history.replaceState = replace; window.removeEventListener('popstate', check); };
   }
 
+  private completionToken(): string | null {
+    if (window.location.pathname !== '/complete' && window.location.pathname !== '/complete/') return null;
+    const tokens = new URLSearchParams(window.location.search).getAll('token');
+    return tokens.length === 1 && /^[A-Za-z0-9._~-]{1,256}$/.test(tokens[0]) ? tokens[0] : null;
+  }
+
   private async checkCompleteRoute(): Promise<void> {
-    if (!/\/complete\/?$/.test(window.location.pathname)) return;
-    const token = new URLSearchParams(window.location.search).get('token');
-    if (token) await this.track('consultation_complete', { eventId: token });
+    const token = this.completionToken();
+    if (!token || !this.options.verifyCompletionToken) return;
+    try {
+      const verified = await this.options.verifyCompletionToken(token);
+      if (this.destroyed || this.completionToken() !== token) return;
+      if (verified && typeof verified.eventId === 'string' && verified.eventId.length > 0 && verified.eventId.length <= 256) {
+        await this.track('consultation_complete', { eventId: verified.eventId });
+      }
+    } catch (error) { this.reportError(errorFrom(error)); }
   }
 
   async track(event: 'consultation_complete', input: { eventId: string }): Promise<void> {
     if (this.destroyed) return;
     if (this.delegate) return this.delegate.track(event, input);
-    if (!this.config || !this.options.hasConsent() || !input.eventId) return;
+    if (event !== 'consultation_complete' || !input || typeof input.eventId !== 'string' ||
+        !input.eventId || input.eventId.length > 256) return;
+    if (this.started) await this.started;
+    if (this.destroyed || !this.config || !this.hasConsent()) return;
     for (const tag of this.config.conversions.filter(item => item.enabled && item.event === event)) {
       if (!this.loadedProviders.has(tag.provider)) continue;
       const adapter = this.options.adapters[tag.provider];

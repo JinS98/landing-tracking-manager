@@ -1,6 +1,6 @@
 # 14일차 — 전환 이벤트 감지
 
-이 문서는 작업 계획입니다. 체크리스트는 해당 일차의 실제 검증 후 표시합니다.
+이 문서는 14일차 구현 및 검증 기록입니다. 실제 랜딩·문의 서버 연동은 별도로 확인해야 합니다.
 
 ## 개발 목표
 
@@ -34,8 +34,8 @@
 
 ## 완료 체크리스트
 
-- [ ] 실제 성공 여부와 단순 페이지 방문의 차이를 문서화
-- [ ] 변경 내용과 테스트 결과를 이 문서에 기록
+- [x] 실제 성공 여부와 단순 페이지 방문의 차이를 문서화
+- [x] 변경 내용과 테스트 결과를 이 문서에 기록
 
 ## 다음 일차 작업과의 연관성
 
@@ -43,6 +43,9 @@
 
 ## 작업 메모
 
-- 구현 파일:
-- 테스트 결과:
-- 남은 이슈:
+- 구현 파일: `packages/tracking-sdk/src/index.ts`, `tests/sdk-conversion.test.mjs`, `docs/03-sdk-spec.md`
+- 성공 콜백 계약: 문의 서버가 접수를 확정하고 고유 `eventId`를 반환한 뒤 `sdk.track('consultation_complete', { eventId })`를 호출한다. SDK 초기화가 진행 중이면 `track`은 완료를 기다린다. 단순 버튼 클릭·폼 제출 시도·완료 페이지 방문은 성공 증거가 아니다.
+- 호환 경로 계약: SDK는 정확한 `/complete` 또는 `/complete/`의 단일 유효 `token`만 읽는다. 호출자가 `verifyCompletionToken(token)`을 제공하고 서버가 접수 사실을 확인해 안정적인 `eventId`를 돌려준 경우에만 전환을 시도한다. 검증 함수가 없거나 거부·오류·경로 변경이 생기면 전환하지 않는다. 성공 콜백과 경로 검증은 같은 접수에 같은 `eventId`를 사용해야 중복 시도를 막을 수 있다.
+- 경로 감지: 초기 로드, `pushState`, `replaceState`, `popstate`를 모의 브라우저에서 검증했다. [MDN popstate 문서](https://developer.mozilla.org/en-US/docs/Web/API/Window/popstate_event)에 따라 이력 API 직접 호출도 감지하도록 두 메서드를 감싼다. SDK `destroy()` 시 원래 메서드를 복구한다.
+- 테스트 결과: 신규 전환 테스트 5건 통과. 전체 `npm test` 53건 통과, `npm run typecheck` 및 `npm run build` 통과.
+- 남은 이슈: 이 저장소에는 실제 랜딩과 문의 서버가 없다. `verifyCompletionToken`의 서버 조회, 만료·재사용 정책, 실제 Next.js 이동, 광고 플랫폼 수신, 기존 완료 페이지와 단일 실행 주체 여부는 운영 연동 시 검증해야 한다.
