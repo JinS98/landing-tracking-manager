@@ -10,12 +10,14 @@ export type Site = {
   environment: 'demo' | 'staging' | 'production';
   status: 'active' | 'pending';
   sdkStatus: 'installed' | 'not_installed' | 'unknown';
+  lastDiagnosticAt?: string;
+  lastDiagnosticKind?: string;
 };
 export type CommonScript = CommonTag;
 export type ConversionScript = ConversionTag;
 export type TrackingConfig = DraftConfig;
 export type TrackingRelease = { id: string; siteId: string; version: number; config: TrackingConfig; publicConfig: PublishedConfig; publishedAt: string; sourceVersion?: number };
-export type AuditEntry = { id: string; siteId: string; action: 'draft' | 'publish' | 'rollback' | 'register'; summary: string; at: string; actorRef?: string; beforeVersion?: number; afterVersion?: number };
+export type AuditEntry = { id: string; siteId: string; companyId?: string; action: 'draft' | 'publish' | 'rollback' | 'register' | 'registerCompany'; summary: string; at: string; actorRef?: string; beforeVersion?: number; afterVersion?: number };
 export type ImportJob = {
   id: string;
   fileName: string;

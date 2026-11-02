@@ -1,92 +1,54 @@
 # Landing Tracking Manager
 
-광고주 랜딩마다 흩어진 광고 태그와 전환 설정을 사이트 단위로 관리하기 위한 독립형 MVP입니다. 사내 직원이 로그인 화면 없이 가상 업체를 선택하고 설정 변경 흐름을 시연할 수 있습니다. 현재 관리자 앱은 브라우저 메모리 데모이며 실제 광고주 데이터, 운영 ID, 운영 Firebase 쓰기, 광고 태그 실행은 포함하지 않습니다. 서버 등록 트랜잭션과 공개 설정 리더는 별도 로컬 에뮬레이터에서 검증했습니다.
+업체별 여러 랜딩 사이트의 광고 매체 설정을 초안·게시본으로 관리하고, 랜딩 SDK가 게시본만 읽는 도구입니다. 문의·페이지뷰용 기존 SDK와 매체 픽셀용 SDK는 별개입니다.
 
-**정적 데모:** https://pixel-manager.web.app — 업체·사이트·게시 데이터는 브라우저 메모리에서만 바뀌고 새로고침하면 초기화됩니다. 실제 관리자 인증·Firestore 쓰기·매체 픽셀 운영 기능은 연결되지 않았습니다.
+## 현재 상태
 
-## 해결하려는 문제
+- Firebase 프로젝트 `landing-tracking`에 서울 리전 Firestore 기본 데이터베이스와 브라우저 직접 접근을 차단하는 Rules·인덱스를 만들었습니다.
+- 관리자 Google 로그인, 계정 제한, 업체·사이트 등록, 엑셀 일괄 등록, 초안 저장, 게시·롤백, 감사 이력, 공개 설정 및 SDK 진단 HTTP 함수의 코드를 연결했습니다. 로컬 에뮬레이터 통합 테스트는 통과했습니다.
+- `npm run build`는 운영 관리자 화면과 `/sdk/landing-tracking-sdk.iife.js` 번들을 만듭니다.
+- **Functions와 새 관리자 화면은 아직 라이브에 배포되지 않았습니다.** 프로젝트의 Blaze 결제 연결 전에는 Firebase Authentication 초기화와 Cloud Functions 배포가 불가능합니다. 현재 `https://pixel-manager.web.app`은 이전 정적 데모입니다.
+- 실제 랜딩 소스는 이 저장소에 없습니다. 랜딩에 SDK와 문의 성공 처리 코드를 넣는 작업은 사이트 담당자가 수행합니다.
 
-랜딩마다 하드코딩된 스크립트는 매체 ID와 전환 조건을 수정할 때 배포와 중복 점검이 어렵습니다. 이 프로젝트는 업체 → 여러 사이트 → 초안 → 게시본의 경계를 만들고, 추후 회사 관리자 시스템의 접근 제어와 연결해 운영하려는 기반입니다.
+## 구성
 
-## 핵심 아키텍처
+| 경로 | 역할 |
+| --- | --- |
+| `apps/admin` | React 관리자 화면. 로컬 개발은 메모리 데모, 운영 빌드는 Firebase 로그인과 관리자 API 사용 |
+| `functions` | Firebase ID 토큰 검증, Firestore 관리자 API, 게시 설정 공개 API, 진단 수신 |
+| `packages/tracking-core` | 초안·공개 설정 검증과 DTO |
+| `packages/tracking-sdk` | 게시 설정 로드, 6개 매체 어댑터, `/complete` 전환 및 탭 세션 중복 방지 |
+| `packages/landing-register` | 배포 파이프라인 등록 CLI. 현재 기본은 dry run |
 
-- apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
-- packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
-- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 6개 매체 어댑터. 19일차에 브라우저 IIFE 번들 빌드와 가상 랜딩 통합 테스트를 추가했습니다. 실제 랜딩 적용과 운영 배포는 아직 없습니다.
-- functions: 사내 접근 게이트용 관리자 접근 검사, 서버 전용 사이트 등록 트랜잭션, 독립 공개 설정 HTTP 핸들러와 Firestore 리더. 서버 배포 진입점은 없습니다.
-- packages/landing-register: 배포 파이프라인용 등록 CLI. 기본 실행은 dry run이고 실제 API 연결은 미완료.
+운영 흐름은 **업체 등록 → 사이트 등록 → 매체 초안 저장 → 게시 → 랜딩 SDK 설치**입니다. SDK는 `tracking-config`의 게시본만 읽습니다. 완료 페이지 전환은 문의 성공 후 만든 랜덤 토큰을 같은 탭 세션에서 확인하고, SDK가 세션 중복 전송을 막습니다. 설치 예시는 [운영 연결 가이드](docs/08-live-integration.md)에 있습니다.
 
-운영 단계에는 기존 회사 관리자 인증 게이트웨이와 필요 시 VPN/접근 프록시 → 서버 측 운영자 검증·세션·CSRF·권한 검사 → Firestore 쓰기/게시 순서가 필요합니다. SDK는 게시된 공개 설정만 조회합니다. 기존 MLeverage SDK와 별도 모듈이며 통합 지점을 남겨 둡니다.
+## 개발과 검증
 
-## 워크스페이스 경계와 실행 명령
+Node.js 22.14+가 필요합니다.
 
-| 워크스페이스 | 현재 의존 방향 | 현재 실행 가능 범위 |
-| --- | --- | --- |
-| `@ltm/admin` | `@ltm/tracking-core`의 초안·공개 설정 계약 사용 | `npm run dev`로 메모리 데모, `npm run build`로 관리자 정적 빌드 |
-| `@ltm/tracking-core` | 내부 패키지 의존 없음 | 공개 게시 설정 타입과 검증 함수의 타입 검사 |
-| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사, 6개 매체 어댑터 모의 DOM 테스트, 브라우저 IIFE 번들 빌드와 가상 랜딩 통합 테스트. 운영 배포는 미구현 |
-| `@ltm/functions` | `@ltm/tracking-core`와 서버 전용 Firebase Admin SDK 사용 | 접근 검사·등록 트랜잭션·공개 조회 핸들러 타입 검사와 로컬 HTTP/Firestore 테스트. 서버 배포 진입점은 미구현 |
-| `@ltm/landing-register` | 내부 패키지 의존 없음 | Node.js 22.14+ 등록 CLI의 입력 검사·dry run·향후 인증 API 요청 |
+```sh
+npm install
+npm run dev
+npm run typecheck
+npm test
+npm run test:ui
+npm run test:landing
+npm run build
+```
 
-루트 `npm run typecheck`는 다섯 워크스페이스를 각각 검사합니다. `npm run build`는 현재 관리자 앱만 빌드합니다. 전체 워크스페이스 설치와 CLI·서버·테스트는 Node.js 22.14+를 기준으로 합니다.
+Firestore 에뮬레이터 테스트는 Firebase CLI와 Java 21이 필요합니다.
 
-## 현재 주요 기능
+```sh
+npm run test:rules
+npm run test:registration
+npm run test:public-config
+npm run test:release
+npm run test:api
+npm run test:hosting
+```
 
-- 가상 업체 전체 검색, 업체별 여러 사이트 선택, siteId 중복을 막는 데모 등록
-- `.xlsx` 첫 시트 열 매핑·미리보기·중복 건너뛰기·오류 보고를 제공하는 메모리 데모 일괄 등록. 서버 업로드 API는 미구현
-- 대시보드의 업체·사이트·활성 매체·SDK 확인 현황 및 최근 변경 이력
-- 6개 매체(GTM, Google Ads, Naver WCS, 당근, Meta, TikTok)의 공통 태그와 전환 이벤트 설정 추가·수정·비활성화·제거
-- 초안과 데모 게시본 비교, 메모리 내 게시·롤백 및 이력
-- 6개 매체의 공통/전환 설정을 저장 전에 검증하고 데모 게시 시 공개 DTO로 투영. 임의 코드 필드 거부
-- 공개 설정 형식 검증과 SDK 런타임, 6개 매체 어댑터의 태그 삽입·전환 호출 모의 테스트. 실제 랜딩과 광고 플랫폼 수신 검증은 미완료
-- 공개 설정 HTTP 핸들러의 게시본 투영, ETag 재검증, 미게시 404 및 Firestore 리더 로컬 검증. 서버 배포는 미완료
-- 배포 사이트 등록 CLI의 dry run, 서버 등록 트랜잭션의 로컬 에뮬레이터 검증. 운영 등록 API는 미구현
+로컬 `npm run dev`는 `http://localhost:5173`에서 메모리 데모를 엽니다. 운영 빌드는 `apps/admin/.env.production`의 공개 Firebase Web 앱 설정으로 로그인 화면을 표시합니다. 실제 API는 서버에서 검증한 Google 계정만 사용할 수 있고 Firestore 클라이언트 읽기·쓰기는 차단됩니다.
 
-## 기술 스택과 이유
+## 배포
 
-- React 19 + TypeScript: 설정 편집 상태와 매체별 입력을 타입으로 관리
-- Vite 6: 빠른 로컬 실행과 정적 관리자 UI 빌드
-- React Router: 업체·사이트·이력 화면 분리
-- npm workspaces: 관리자, 공통 계약, SDK, 서버/CLI의 교체 가능한 경계
-- Firebase/Firestore: 운영 저장소로 계획 중이며 현재 클라이언트 연결은 제거됨
-
-## 실행과 데모
-
-프로젝트 설치·실행은 Node.js 22.14+에서 진행합니다.
-
-    npm install
-    npm run dev
-
-브라우저에서 http://localhost:5173 을 엽니다. 별도 계정이나 Firebase 설정은 필요하지 않습니다. 업체 관리에서 가상 사이트를 등록하고, 엑셀 일괄 등록에서 `.xlsx` 파일의 첫 시트를 미리 볼 수 있습니다. 엑셀 헤더 예시는 `companyId | companyName | siteId | domain`이며 ID와 도메인은 텍스트 셀로 입력합니다. 일괄 등록은 최대 2MB·500행의 데모이며 유효한 행만 메모리에 추가합니다. 설정 편집 → 미리보기 → 데모 게시 → 롤백도 시험할 수 있습니다. 새로고침하면 데모 상태가 초기화됩니다. apps/admin/.env.example의 플래그를 바꿔도 운영 쓰기는 활성화되지 않습니다.
-
-등록 CLI dry run은 Node.js 22.14+에서 `npm run register -w @ltm/landing-register -- --site-id sample-site --company-id sample-company --domain landing.example --environment staging`으로 실행합니다. `--apply`는 회사의 인증된 등록 API가 마련된 뒤 배포 파이프라인에서만 사용합니다.
-
-검증 명령:
-
-    npm run typecheck
-    npm run build
-    npm test
-    npm run test:ui
-    npm run test:landing
-    npm run test:hosting
-
-Firestore Rules 로컬 검증에는 별도로 Firebase CLI와 Java 21이 필요합니다. 아래 명령은 `demo-landing-tracking-manager` 에뮬레이터에서만 익명 접근 거부를 검사합니다.
-
-    npm run test:rules
-    npm run test:registration
-    npm run test:public-config
-    npm run test:release
-
-`test:registration`과 `test:public-config`도 Firebase CLI·Java 21을 사용하며 `demo-` 에뮬레이터에서만 서버 등록 트랜잭션과 공개 설정 리더를 검사합니다.
-
-정적 데모는 Firebase 프로젝트 `landing-tracking`의 Hosting 사이트 `pixel-manager`에 배포했습니다. `landing-tracking.web.app`은 이미 다른 프로젝트가 사용 중이어서 요청 후보 중 사용 가능한 `pixel-manager.web.app`을 선택했습니다. 배포·라이브 확인·복구 명령과 정적 데모/운영 기능의 경계는 [배포 절차](docs/07-deployment.md)에 있습니다.
-
-## 회사 관리자 통합 계획
-
-apps/admin/src/lib/adminGateway.ts의 인터페이스를 회사 관리자 API 어댑터로 구현합니다. functions/src/access.ts의 서버 측 게이트 검증·인가 인터페이스를 별도로 구현해야 합니다. 서버는 접근 게이트가 검증한 운영자 신원과 권한을 매 요청 확인하고, Firestore에서 버전 충돌 검사·감사 로그·게시/롤백을 처리합니다. 사이트 자동 등록은 별도 배포 주체의 인증으로만 허용합니다.
-
-## 보안 제한과 미구현 항목
-
-운영 관리자 API와 배포 주체의 실제 자격 증명 검증기, 배포된 Firestore Rules, 공개 HTTP 핸들러의 서버 마운트, **게시 설정 JSON의** CDN 배포, 실제 SDK 설치 진단은 아직 없습니다. Firebase Hosting에는 정적 데모 화면만 배포했습니다. 6개 매체 어댑터도 실제 랜딩과 광고 플랫폼 수신 검증 전에는 운영 전환 측정에 사용하지 않습니다. 등록 CLI는 운영 API가 없으므로 현재 dry run과 모의 요청 테스트로만 사용할 수 있습니다. firestore.rules에는 브라우저 읽기/쓰기를 모두 거부하는 초안만 있습니다. 로그인 UI가 없으므로 사내 접근 게이트가 연결되기 전까지 데모만 허용합니다. 개인정보와 실제 광고주 ID를 저장소에 올리지 않습니다.
-
-설계·일정·운영 전 검증 항목은 docs/를 참조하세요.
+Blaze 연결과 Firebase Authentication의 Google 제공자 활성화가 끝나면 Functions·Firestore·Hosting을 배포합니다. 서버의 `ADMIN_EMAIL`은 배포 환경에서만 설정하며 저장소에 커밋하지 않습니다. 명령과 랜딩 설치 절차는 [운영 연결 가이드](docs/08-live-integration.md)에 있습니다. 20일차 정적 데모의 당시 상태는 [배포 기록](docs/07-deployment.md)에 남겨 두었습니다.

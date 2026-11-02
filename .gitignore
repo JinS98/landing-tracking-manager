@@ -6,3 +6,6 @@ dist/
 .firebase/
 *.log
 *.tsbuildinfo
+functions/lib/
+functions/.env.*
+apps/admin/public/sdk/

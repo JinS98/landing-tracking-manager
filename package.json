@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @ltm/admin",
-    "build": "npm run build -w @ltm/admin",
+    "build": "npm run build:sdk && node scripts/prepare-sdk.mjs && npm run build -w @ltm/admin",
     "build:sdk": "npm run build -w @ltm/tracking-sdk",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs tests/registration-cli.test.mjs tests/import.test.mjs tests/tracking-config.test.mjs tests/google-adapters.test.mjs tests/naver-adapter.test.mjs tests/social-adapters.test.mjs tests/public-config.test.mjs tests/sdk-init.test.mjs tests/sdk-conversion.test.mjs tests/script-editor.test.mjs",
@@ -19,7 +19,8 @@
     "test:rules": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --test tests/firestore-rules.test.mjs\"",
     "test:registration": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/registration-firestore.test.mjs\"",
     "test:public-config": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/public-config-firestore.test.mjs\"",
-    "test:release": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/release-firestore.test.mjs\""
+    "test:release": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/release-firestore.test.mjs\"",
+    "test:api": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/admin-api-firestore.test.mjs\""
   },
   "devDependencies": {
     "playwright-core": "^1.64.1",

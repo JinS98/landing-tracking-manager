@@ -15,13 +15,13 @@ export type Operator = {
 };
 
 export type AdminAction =
-  | 'readCompanies' | 'readSites' | 'getDraft' | 'readHistory'
+  | 'readCompanies' | 'readSites' | 'getDraft' | 'readHistory' | 'registerCompany' | 'importSites'
   | 'registerSite' | 'saveDraft' | 'publish' | 'rollback';
 export type AdminResource = { siteId?: string; companyId?: string };
 
 export class AdminAccessError extends Error {
-  readonly status: 400 | 401 | 403 | 405 | 503;
-  constructor(status: 400 | 401 | 403 | 405 | 503, message: string) {
+  readonly status: 400 | 401 | 403 | 405 | 409 | 503;
+  constructor(status: 400 | 401 | 403 | 405 | 409 | 503, message: string) {
     super(message);
     this.status = status;
     this.name = 'AdminAccessError';
@@ -51,6 +51,8 @@ export type AdminAccessDependencies = {
 
 const methods: Record<AdminAction, 'GET' | 'POST' | 'PUT'> = {
   readCompanies: 'GET', readSites: 'GET', getDraft: 'GET', readHistory: 'GET',
+  registerCompany: 'POST',
+  importSites: 'POST',
   registerSite: 'POST', saveDraft: 'PUT', publish: 'POST', rollback: 'POST',
 };
 const siteScoped = new Set<AdminAction>(['getDraft', 'readHistory', 'registerSite', 'saveDraft', 'publish', 'rollback']);
