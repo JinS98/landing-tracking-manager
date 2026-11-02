@@ -6,6 +6,7 @@ import { AdminAccessError } from '../functions/src/access.ts';
 import { registerSiteInFirestore } from '../functions/src/registerSite.ts';
 import { firestorePublicConfigStore } from '../functions/src/publicConfig.ts';
 import { ReleaseWorkflowError, saveAdminDraft, publishAdminDraft, rollbackAdminRelease } from '../functions/src/releaseWorkflow.ts';
+import { listSiteAudit } from '../functions/src/auditHistory.ts';
 
 const host = process.env.FIRESTORE_EMULATOR_HOST;
 if (!host || !/^(127\.0\.0\.1|localhost):\d+$/.test(host)) {
@@ -60,6 +61,13 @@ test('draft, publish and rollback are atomic, versioned and visible through publ
     'AW-123456789/SECOND');
   assert.equal((await db.collection('trackingReleases').doc(`${siteId}__v3`).get()).data().sourceVersion, 1);
   assert.equal((await db.collection('auditLogs').where('siteId', '==', siteId).get()).size, 6);
+  const history = await listSiteAudit(db, siteId, 3, request('GET'), deps);
+  assert.deepEqual(history.map(entry => [entry.action, entry.beforeVersion, entry.afterVersion]),
+    [['rollback', 2, 3], ['publish', 1, 2], ['draft', 1, 2]]);
+  assert.ok(history.every(entry => entry.actorRef === 'editor-demo' && entry.createdAt.endsWith('Z')));
+  const allHistory = await listSiteAudit(db, siteId, 10, request('GET'), deps);
+  assert.equal(allHistory.at(-1).action, 'register');
+  assert.equal(allHistory.at(-1).beforeVersion, null);
   await assert.rejects(publishAdminDraft(db, siteId, 3, request('POST'), deps), conflict(409));
 });
 
@@ -79,6 +87,8 @@ test('concurrent writes with the same expectedVersion yield one draft and one co
 test('missing gateway or invalid draft cannot create a release', async () => {
   const siteId = 'release-denied';
   await register(siteId);
+  await assert.rejects(listSiteAudit(db, siteId, 10, request('GET'), undefined),
+    error => error instanceof AdminAccessError && error.status === 503);
   await assert.rejects(saveAdminDraft(db, siteId, draft(siteId, 0, 'FIRST'), 0, request('PUT'), undefined),
     error => error instanceof AdminAccessError && error.status === 503);
   await assert.rejects(saveAdminDraft(db, siteId, { ...draft(siteId, 0, 'FIRST'), script: '<script />' },

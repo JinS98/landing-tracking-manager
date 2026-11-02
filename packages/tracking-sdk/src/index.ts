@@ -7,6 +7,12 @@ export type ProviderAdapter = {
   load(tag: CommonTag): Promise<void> | void;
   convert(tag: ConversionTag): Promise<void> | void;
 };
+export type TrackingDiagnostic = {
+  kind: 'config_loaded' | 'adapter_loaded' | 'adapter_failed' | 'consent_blocked' | 'ready' | 'init_failed';
+  siteId: string;
+  releaseVersion?: number;
+  provider?: Provider;
+};
 export type TrackingSdkOptions = {
   siteId: string;
   configUrl: string;
@@ -15,6 +21,8 @@ export type TrackingSdkOptions = {
   /** Optional extra validation for completion tokens. Return null to suppress conversion. */
   verifyCompletionToken?: (token: string) => Promise<{ eventId: string } | null>;
   onError?: (error: Error) => void;
+  /** Local signal only. A host application must explicitly send approved telemetry. */
+  onDiagnostic?: (signal: TrackingDiagnostic) => void;
   timeoutMs?: number;
 };
 
@@ -69,7 +77,8 @@ export class TrackingSdk {
       this.config = null;
       this.loadedProviders.clear();
       this.config = await this.fetchConfig();
-      if (this.destroyed || !this.hasConsent()) return;
+      this.emitDiagnostic('config_loaded');
+      if (this.destroyed || !this.hasConsent()) { this.emitDiagnostic('consent_blocked'); return; }
       const registry = this.registry();
       for (const tag of this.config.common.filter(item => item.enabled)) {
         if (this.destroyed || !this.hasConsent()) return;
@@ -77,14 +86,15 @@ export class TrackingSdk {
         const adapter = this.options.adapters[tag.provider];
         if (!adapter) continue;
         if (registry.has(key)) { this.loadedProviders.add(tag.provider); continue; }
-        try { await adapter.load(tag); registry.add(key); this.loadedProviders.add(tag.provider); }
-        catch (error) { this.reportError(errorFrom(error)); }
+        try { await adapter.load(tag); registry.add(key); this.loadedProviders.add(tag.provider); this.emitDiagnostic('adapter_loaded', tag.provider); }
+        catch (error) { this.emitDiagnostic('adapter_failed', tag.provider); this.reportError(errorFrom(error)); }
       }
       if (this.destroyed) return;
       this.observeRoutes();
       initialized = true;
+      this.emitDiagnostic('ready');
       void this.checkCompleteRoute();
-    } catch (error) { this.reportError(errorFrom(error)); }
+    } catch (error) { this.emitDiagnostic('init_failed'); this.reportError(errorFrom(error)); }
     finally {
       if (!initialized) {
         this.started = null;
@@ -131,6 +141,12 @@ export class TrackingSdk {
 
   private reportError(error: Error): void {
     try { this.options.onError?.(error); } catch { /* diagnostics must not block the page */ }
+  }
+
+  private emitDiagnostic(kind: TrackingDiagnostic['kind'], provider?: Provider): void {
+    try { this.options.onDiagnostic?.({ kind, siteId: this.options.siteId,
+      ...(this.config ? { releaseVersion: this.config.releaseVersion } : {}), ...(provider ? { provider } : {}) }); }
+    catch { /* diagnostics must not block the page */ }
   }
 
   private hasConsent(): boolean {

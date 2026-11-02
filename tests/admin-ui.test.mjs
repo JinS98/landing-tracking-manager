@@ -50,7 +50,7 @@ test('admin browser editor adds, edits, toggles, removes and publishes demo scri
     await page.getByRole('button', { name: '제거' }).click();
     assert.equal(await page.locator('.script-row').count(), 0);
     await page.getByRole('link', { name: '배포 이력' }).click();
-    assert.match(await page.locator('.history-list').innerText(), /전환 이벤트 제거/);
+    assert.match(await page.locator('tbody').innerText(), /전환 이벤트 제거/);
     await page.close();
   } finally {
     await browser?.close();
@@ -90,4 +90,35 @@ test('browser preview shows a change and rollback creates a new immutable demo r
     await browser?.close();
     await server.close();
   }
+});
+
+test('redesigned admin shows demo diagnostics and filters actor/version audit history', async () => {
+  const server = await createServer({ root: resolve('apps/admin'), configFile: resolve('apps/admin/vite.config.ts'),
+    server: { host: '127.0.0.1', port: 0 } });
+  let browser;
+  try {
+    await server.listen();
+    const address = server.httpServer?.address();
+    if (!address || typeof address === 'string') throw new Error('Vite did not provide a local port');
+    browser = await chromium.launch({ channel: 'msedge', headless: true });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.goto(`http://127.0.0.1:${address.port}/sites/coffee-main`);
+    assert.equal(await page.locator('.brand-icon').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(232, 135, 49)');
+    await page.getByRole('button', { name: '데모 게시' }).click();
+    await page.getByRole('link', { name: '배포 이력' }).click();
+    await page.getByLabel('이력 사이트 필터').selectOption('coffee-main');
+    assert.match(await page.locator('tbody').innerText(), /demo-operator/);
+    assert.match(await page.locator('tbody').innerText(), /0 → 1/);
+    await page.getByLabel('이력 사이트 필터').selectOption('coffee-event');
+    assert.match(await page.locator('.empty').innerText(), /이력이 없습니다/);
+    await page.getByRole('link', { name: '설치 진단' }).click();
+    assert.match(await page.locator('.notice').innerText(), /가상 값/);
+    await page.getByLabel('진단 상태 필터').selectOption('unknown');
+    assert.equal(await page.locator('tbody tr').count(), 1);
+    assert.match(await page.locator('tbody').innerText(), /수집된 신호 없음/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await page.locator('.company-rail').isVisible(), false);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    await page.close();
+  } finally { await browser?.close(); await server.close(); }
 });

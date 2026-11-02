@@ -15,7 +15,7 @@ export function saveDraft(state: DemoWorkspace, config: TrackingConfig, descript
   return {
     ...state,
     drafts: [...state.drafts.filter(item => item.siteId !== config.siteId), next],
-    audit: [{ id: crypto.randomUUID(), siteId: config.siteId, action: 'draft', summary: description ? `초안 v${next.version} · ${description}` : `초안 v${next.version} 수정`, at: stamp() }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId: config.siteId, action: 'draft', summary: description ? `초안 v${next.version} · ${description}` : `초안 v${next.version} 수정`, at: stamp(), actorRef: 'demo-operator', beforeVersion: config.version, afterVersion: next.version }, ...state.audit],
   };
 }
 
@@ -88,7 +88,7 @@ export function publishDraft(state: DemoWorkspace, siteId: string, expectedDraft
   const release: TrackingRelease = { id: crypto.randomUUID(), siteId, version, config: structuredClone(draft), publicConfig, publishedAt };
   return {
     ...state, releases: [release, ...state.releases],
-    audit: [{ id: crypto.randomUUID(), siteId, action: 'publish', summary: `데모 릴리스 v${version} 게시`, at: release.publishedAt }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId, action: 'publish', summary: `데모 릴리스 v${version} 게시`, at: release.publishedAt, actorRef: 'demo-operator', beforeVersion: latest?.version ?? 0, afterVersion: version }, ...state.audit],
   };
 }
 
@@ -109,7 +109,7 @@ export function rollbackRelease(state: DemoWorkspace, siteId: string, targetVers
   return {
     ...state, releases: [release, ...state.releases],
     drafts: [...state.drafts.filter(item => item.siteId !== siteId), { ...structuredClone(target.config), version: (state.drafts.find(item => item.siteId === siteId)?.version ?? 0) + 1 }],
-    audit: [{ id: crypto.randomUUID(), siteId, action: 'rollback', summary: `v${targetVersion} 기준으로 v${version} 롤백`, at: release.publishedAt }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId, action: 'rollback', summary: `v${targetVersion} 기준으로 v${version} 롤백`, at: release.publishedAt, actorRef: 'demo-operator', beforeVersion: latest.version, afterVersion: version }, ...state.audit],
   };
 }
 
@@ -123,6 +123,6 @@ export function registerSite(state: DemoWorkspace, input: Pick<Site, 'id' | 'com
   const site: Site = { id, companyId: input.companyId, domain, environment: 'demo', status: 'pending', sdkStatus: 'unknown' };
   return {
     ...state, sites: [...state.sites, site],
-    audit: [{ id: crypto.randomUUID(), siteId: id, action: 'register', summary: `데모 사이트 ${id} 등록`, at: stamp() }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId: id, action: 'register', summary: `데모 사이트 ${id} 등록`, at: stamp(), actorRef: 'demo-operator', beforeVersion: 0, afterVersion: 0 }, ...state.audit],
   };
 }

@@ -168,3 +168,17 @@ test('consent gate and failed adapters prevent conversion while other active tag
     sdk.destroy();
   });
 });
+
+test('diagnostic callback reports safe local milestones without tokens or tracking IDs', async () => {
+  const siteId = 'diagnostic-demo';
+  await withBrowser(async () => ({ ok: true, json: async () => published(siteId, [gtm]) }), async () => {
+    const signals = [];
+    const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
+      adapters: { gtm: { load() {}, convert() {} } }, onDiagnostic: signal => signals.push(signal) });
+    await sdk.start();
+    assert.deepEqual(signals.map(signal => signal.kind), ['config_loaded', 'adapter_loaded', 'ready']);
+    assert.ok(signals.every(signal => signal.siteId === siteId && signal.releaseVersion === 1));
+    assert.ok(!JSON.stringify(signals).includes('GTM-DEMO123'));
+    sdk.destroy();
+  });
+});

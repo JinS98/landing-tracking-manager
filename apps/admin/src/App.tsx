@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { Activity, Building2, Code2, FileSpreadsheet, History, LayoutDashboard, Plus, Search, ShieldCheck } from 'lucide-react';
+import { Activity, Building2, ChevronRight, CircleHelp, Code2, FileSpreadsheet, History, LayoutDashboard, Plus, Search, ShieldCheck } from 'lucide-react';
 import ImportPage from './ImportPage';
 import { demoMode } from './lib/firebase';
 import { initialWorkspace, providerLabels } from './lib/demoData';
@@ -21,8 +21,19 @@ const dateText = (value: string) => new Date(value).toLocaleString('ko-KR');
 function Sidebar() {
   return <aside className="sidebar">
     <div className="brand"><div className="brand-icon"><Code2 size={21}/></div><div><b>Landing Tracking</b><small>Manager Console</small></div></div>
-    <nav>{menu.map(item => <NavLink key={item.to} end={item.end} to={item.to} className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}><item.icon size={18}/>{item.label}</NavLink>)}</nav>
-    <div className="sidebar-footer"><ShieldCheck size={17}/> 독립형 데모 · 운영 쓰기 차단</div>
+    <div className="nav-caption">워크스페이스</div><nav aria-label="주 메뉴">{menu.map(item => <NavLink key={item.to} end={item.end} to={item.to} className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}><item.icon size={18}/>{item.label}</NavLink>)}</nav>
+    <div className="sidebar-footer"><ShieldCheck size={17}/> 데모 작업공간</div>
+  </aside>;
+}
+
+function CompanyRail({ workspace }: { workspace: DemoWorkspace }) {
+  const [query, setQuery] = useState('');
+  const matches = searchCompanies(workspace, query);
+  return <aside className="company-rail" aria-label="업체 빠른 이동">
+    <div className="rail-search"><Search size={16}/><input aria-label="빠른 업체 검색" placeholder="업체 검색" value={query} onChange={event => setQuery(event.target.value)}/></div>
+    <div className="rail-meta"><span>업체 <b>{workspace.companies.length}</b>개</span><NavLink to="/sites">전체 보기 <ChevronRight size={13}/></NavLink></div>
+    <div className="rail-list">{matches.map(({ company, sites }) => <div key={company.id} className="rail-company"><NavLink to={'/companies/' + company.id} className={({ isActive }) => 'rail-company-link' + (isActive ? ' active' : '')}><span className="rail-avatar">{company.name.slice(0, 1)}</span><span className="rail-company-name"><b>{company.name}</b><small>{sites.length}개 사이트</small></span><ChevronRight size={14}/></NavLink>{sites.map(site => <NavLink key={site.id} to={'/sites/' + site.id} className={({ isActive }) => 'rail-site' + (isActive ? ' active' : '')}>{site.id}</NavLink>)}</div>)}{!matches.length && <p className="rail-empty">검색 결과가 없습니다.</p>}</div>
+    <div className="rail-footer">가상 업체 데이터 · 브라우저 메모리</div>
   </aside>;
 }
 
@@ -173,22 +184,40 @@ function SiteDetail({ workspace, setWorkspace }: { workspace: DemoWorkspace; set
 }
 
 function Releases({ workspace }: { workspace: DemoWorkspace }) {
-  return <><div className="page-head"><div><span className="eyebrow">RELEASES</span><h1>배포 이력</h1><p>브라우저 메모리의 데모 게시 및 변경 기록입니다.</p></div></div><div className="panel">{workspace.audit.length ? <ul className="history-list">{workspace.audit.map(entry => <li key={entry.id}><div><b>{entry.summary}</b><span>{entry.siteId} · {dateText(entry.at)}</span></div><NavLink className="text-link" to={'/sites/' + entry.siteId}>사이트 보기 →</NavLink></li>)}</ul> : <p className="empty">아직 기록이 없습니다.</p>}</div></>;
+  const [siteFilter, setSiteFilter] = useState('all');
+  const [actionFilter, setActionFilter] = useState('all');
+  const entries = workspace.audit.filter(entry => (siteFilter === 'all' || entry.siteId === siteFilter) && (actionFilter === 'all' || entry.action === actionFilter));
+  const actionName = { draft: '초안', publish: '게시', rollback: '롤백', register: '등록' };
+  return <><div className="page-head"><div><span className="eyebrow">RELEASES</span><h1>변경 및 배포 이력</h1><p>데모 작업공간에서 수행한 작업을 사이트별로 확인합니다.</p></div><span className="pill amber">데모 기록</span></div>
+    <div className="stats compact-stats"><div className="stat"><small>전체 기록</small><strong>{workspace.audit.length}</strong><span>브라우저 메모리</span></div><div className="stat"><small>게시</small><strong>{workspace.audit.filter(entry => entry.action === 'publish').length}</strong><span>데모 릴리스</span></div><div className="stat"><small>롤백</small><strong>{workspace.audit.filter(entry => entry.action === 'rollback').length}</strong><span>새 버전으로 복원</span></div></div>
+    <div className="panel"><div className="panel-head"><h2>감사 로그</h2><span className="muted">{entries.length}건 표시</span></div><div className="filter-bar"><label>사이트<select aria-label="이력 사이트 필터" value={siteFilter} onChange={event => setSiteFilter(event.target.value)}><option value="all">전체 사이트</option>{workspace.sites.map(site => <option key={site.id} value={site.id}>{site.id}</option>)}</select></label><label>작업<select aria-label="이력 작업 필터" value={actionFilter} onChange={event => setActionFilter(event.target.value)}><option value="all">전체 작업</option>{Object.entries(actionName).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>
+      {entries.length ? <div className="table-wrap"><table><thead><tr><th>시간</th><th>작업</th><th>사이트</th><th>변경 내용</th><th>주체</th><th>버전</th><th></th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{dateText(entry.at)}</td><td><span className={'pill ' + (entry.action === 'rollback' ? 'amber' : entry.action === 'publish' ? 'green' : 'gray')}>{actionName[entry.action]}</span></td><td><strong>{entry.siteId}</strong></td><td>{entry.summary}</td><td>{entry.actorRef ?? '데모 기록'}</td><td>{entry.beforeVersion === undefined ? '—' : `${entry.beforeVersion} → ${entry.afterVersion}`}</td><td><NavLink className="text-link" to={'/sites/' + entry.siteId}>보기</NavLink></td></tr>)}</tbody></table></div> : <p className="empty">선택한 조건의 이력이 없습니다.</p>}
+    </div></>;
 }
-function Diagnostics() {
-  return <><div className="page-head"><div><span className="eyebrow">DIAGNOSTICS</span><h1>설치 진단</h1><p>실제 SDK 설치 및 이벤트 실행 상태 연동 예정</p></div></div><div className="panel placeholder"><Activity size={34}/><h2>아직 연결되지 않은 기능</h2><p>데모 사이트의 SDK 상태는 가상 데이터입니다.</p></div></>;
+function Diagnostics({ workspace }: { workspace: DemoWorkspace }) {
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('all');
+  const sites = workspace.sites.filter(site => (status === 'all' || site.sdkStatus === status) && (site.id.toLowerCase().includes(query.toLowerCase()) || site.domain.toLowerCase().includes(query.toLowerCase())));
+  const count = (value: Site['sdkStatus']) => workspace.sites.filter(site => site.sdkStatus === value).length;
+  const statusLabel = { installed: '설치 확인 예시', not_installed: '미설치 예시', unknown: '미확인' };
+  return <><div className="page-head"><div><span className="eyebrow">DIAGNOSTICS</span><h1>설치 진단</h1><p>사이트별 SDK 진단 상태를 확인합니다.</p></div><span className="pill amber">가상 상태</span></div>
+    <div className="notice"><b>진단 수집 미연결</b> — 아래 상태는 화면 시연용 가상 값입니다. 미확인은 관측 자료가 없다는 뜻이며 미설치를 입증하지 않습니다.</div>
+    <div className="stats compact-stats"><div className="stat"><small>설치 확인 예시</small><strong>{count('installed')}</strong><span>실제 검증 아님</span></div><div className="stat"><small>미설치 예시</small><strong>{count('not_installed')}</strong><span>실제 검증 아님</span></div><div className="stat"><small>미확인</small><strong>{count('unknown')}</strong><span>관측 자료 없음</span></div></div>
+    <div className="panel"><div className="panel-head"><h2>사이트별 상태</h2><span className="muted">{sites.length}개 사이트</span></div><div className="filter-bar"><div className="toolbar"><Search size={17}/><input aria-label="진단 사이트 검색" placeholder="siteId 또는 도메인 검색" value={query} onChange={event => setQuery(event.target.value)}/></div><select aria-label="진단 상태 필터" value={status} onChange={event => setStatus(event.target.value)}><option value="all">전체 상태</option><option value="installed">설치 확인 예시</option><option value="not_installed">미설치 예시</option><option value="unknown">미확인</option></select></div>
+      {sites.length ? <div className="table-wrap"><table><thead><tr><th>사이트</th><th>도메인</th><th>표시 상태</th><th>실제 관측</th><th></th></tr></thead><tbody>{sites.map(site => <tr key={site.id}><td><strong>{site.id}</strong></td><td>{site.domain}</td><td><span className={'pill ' + (site.sdkStatus === 'installed' ? 'green' : site.sdkStatus === 'not_installed' ? 'amber' : 'gray')}>{statusLabel[site.sdkStatus]}</span></td><td>수집된 신호 없음</td><td><NavLink className="text-link" to={'/sites/' + site.id}>사이트 보기</NavLink></td></tr>)}</tbody></table></div> : <p className="empty">검색 결과가 없습니다.</p>}
+    </div><div className="diagnostic-explainer"><CircleHelp size={18}/><p>운영 진단은 신뢰할 수 있는 수집 경로의 수신 시각, SDK 버전, 설정 버전, 초기화 결과가 있어야 판정합니다. 관측이 없는 사이트는 언제나 미확인입니다.</p></div></>;
 }
 
 export default function App() {
   const [workspace, setWorkspace] = useState<DemoWorkspace>(() => structuredClone(initialWorkspace));
-  return <div className="shell"><Sidebar/><main className="main"><header className="topbar"><span>Workspace / Tracking</span><span className="demo-label">{demoMode ? 'DEMO MODE · 운영 쓰기 차단' : ''}</span></header><div className="content"><Routes>
+  return <div className="shell"><Sidebar/><CompanyRail workspace={workspace}/><main className="main"><header className="topbar"><div className="breadcrumb"><span>마케팅 도구</span><ChevronRight size={14}/><b>랜딩 추적 관리</b></div><span className="demo-label">{demoMode ? '데모 모드 · 운영 쓰기 차단' : ''}</span></header><div className="content"><Routes>
     <Route path="/" element={<Dashboard workspace={workspace}/>}/>
     <Route path="/sites" element={<Sites workspace={workspace} setWorkspace={setWorkspace}/>}/>
     <Route path="/imports" element={<ImportPage workspace={workspace} setWorkspace={setWorkspace}/>}/>
     <Route path="/companies/:companyId" element={<CompanyDetail workspace={workspace}/>}/>
     <Route path="/sites/:siteId" element={<SiteDetail workspace={workspace} setWorkspace={setWorkspace}/>}/>
     <Route path="/releases" element={<Releases workspace={workspace}/>}/>
-    <Route path="/diagnostics" element={<Diagnostics/>}/>
+    <Route path="/diagnostics" element={<Diagnostics workspace={workspace}/>}/>
     <Route path="*" element={<Navigate to="/" replace/>}/>
   </Routes></div></main></div>;
 }

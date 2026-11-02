@@ -9,3 +9,5 @@
 5일차에는 `registerSite.ts`에 Firestore Admin SDK 트랜잭션을 구현했습니다. 업체 존재 확인 후 `sites/{siteId}`와 빈 `trackingConfigs/{siteId}` 및 등록 감사 로그를 원자적으로 생성합니다. 같은 입력의 재요청은 기존 초안을 건드리지 않고 `existing`을 반환하며 업체·도메인·환경 충돌은 409로 거부합니다. `registerSiteFromDeployment`는 별도 `DeploymentVerifier`가 없으면 거부하지만 실제 자격 증명 검증기는 아직 없습니다. HTTP 핸들러와 운영 Firebase 연결은 추가하지 않았습니다. 로컬 에뮬레이터는 `npm run test:registration`으로 검증합니다.
 
 17일차 `releaseWorkflow.ts`는 `requireAdminAccess` 이후 초안 버전 비교, 변경 없는 게시 거부, 결정적 ID의 불변 릴리스 생성, 포인터·감사 로그 갱신, 이전 내용의 새 릴리스 복원을 처리합니다. `npm run test:release`로 로컬 에뮬레이터에서 검사했습니다. CDN 배포와 실제 회사 게이트·관리자 HTTP 연결은 별도 작업입니다.
+
+18일차 `auditHistory.ts`는 사이트별 최근 감사 항목을 `readHistory` 권한 확인 후 조회합니다. `actorRef`와 전후 버전, 서버 Timestamp를 검증하고 공개 설정과 분리합니다. 진단 수집 API와 관리자 HTTP 라우트는 아직 없습니다.

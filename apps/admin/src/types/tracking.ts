@@ -15,7 +15,7 @@ export type CommonScript = CommonTag;
 export type ConversionScript = ConversionTag;
 export type TrackingConfig = DraftConfig;
 export type TrackingRelease = { id: string; siteId: string; version: number; config: TrackingConfig; publicConfig: PublishedConfig; publishedAt: string; sourceVersion?: number };
-export type AuditEntry = { id: string; siteId: string; action: 'draft' | 'publish' | 'rollback' | 'register'; summary: string; at: string };
+export type AuditEntry = { id: string; siteId: string; action: 'draft' | 'publish' | 'rollback' | 'register'; summary: string; at: string; actorRef?: string; beforeVersion?: number; afterVersion?: number };
 export type ImportJob = {
   id: string;
   fileName: string;
