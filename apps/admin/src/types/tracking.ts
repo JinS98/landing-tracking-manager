@@ -1,4 +1,6 @@
-export type Provider = 'gtm' | 'googleAds' | 'naverWcs' | 'karrot' | 'meta' | 'tiktok';
+import type { CommonTag, ConversionTag, DraftConfig, Provider as CoreProvider, PublishedConfig } from '@ltm/tracking-core';
+
+export type Provider = CoreProvider;
 
 export type Company = { id: string; name: string; status: 'active' | 'pending' };
 export type Site = {
@@ -9,18 +11,10 @@ export type Site = {
   status: 'active' | 'pending';
   sdkStatus: 'installed' | 'not_installed' | 'unknown';
 };
-export type CommonScript = { id: string; provider: Provider; enabled: boolean; trackingId: string; inflowDomain?: string };
-export type ConversionScript = {
-  id: string;
-  provider: Provider;
-  enabled: boolean;
-  event: 'consultation_complete';
-  sendTo?: string;
-  conversionType?: string;
-  eventName?: string;
-};
-export type TrackingConfig = { siteId: string; version: number; common: CommonScript[]; conversions: ConversionScript[] };
-export type TrackingRelease = { id: string; siteId: string; version: number; config: TrackingConfig; publishedAt: string; sourceVersion?: number };
+export type CommonScript = CommonTag;
+export type ConversionScript = ConversionTag;
+export type TrackingConfig = DraftConfig;
+export type TrackingRelease = { id: string; siteId: string; version: number; config: TrackingConfig; publicConfig: PublishedConfig; publishedAt: string; sourceVersion?: number };
 export type AuditEntry = { id: string; siteId: string; action: 'draft' | 'publish' | 'rollback' | 'register'; summary: string; at: string };
 export type ImportJob = {
   id: string;

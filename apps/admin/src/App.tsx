@@ -101,6 +101,10 @@ function ScriptEditor({ config, onChange }: { config: TrackingConfig; onChange: 
   const [error, setError] = useState('');
   const items = tab === 'common' ? config.common : config.conversions;
   function reset() { setTrackingId(''); setDomain(''); setEventValue(''); setEditingId(null); setError(''); }
+  function apply(next: TrackingConfig): boolean {
+    try { onChange(next); setError(''); return true; }
+    catch (reason) { setError((reason as Error).message); return false; }
+  }
   function edit(item: CommonScript | ConversionScript) {
     setEditingId(item.id); setProvider(item.provider); setError('');
     if ('trackingId' in item) { setTrackingId(item.trackingId); setDomain(item.inflowDomain ?? ''); }
@@ -110,35 +114,25 @@ function ScriptEditor({ config, onChange }: { config: TrackingConfig; onChange: 
     const value = tab === 'common' ? trackingId.trim() : eventValue.trim();
     if (!value) { setError('필수 입력값을 입력하세요.'); return; }
     if (tab === 'common') {
-      if (provider === 'gtm' && !/^GTM-[A-Z0-9]+$/.test(value)) { setError('GTM-... 형식을 입력하세요.'); return; }
-      if (provider === 'googleAds' && !/^AW-[0-9]+$/.test(value)) { setError('AW-숫자 형식을 입력하세요.'); return; }
-      if (provider !== 'gtm' && provider !== 'googleAds' && !/^[A-Za-z0-9_-]{1,100}$/.test(value)) { setError('ID는 영문, 숫자, 하이픈, 밑줄만 입력하세요.'); return; }
-      if (provider === 'naverWcs' && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain.trim())) { setError('유효한 네이버 유입 도메인을 입력하세요.'); return; }
-      if (config.common.some(item => item.provider === provider && item.id !== editingId)) { setError('이 매체의 공통 스크립트가 이미 있습니다. 기존 항목을 수정하세요.'); return; }
-      const item: CommonScript = { id: editingId ?? crypto.randomUUID(), provider, enabled: editingId ? config.common.find(x => x.id === editingId)?.enabled ?? true : true, trackingId: value, ...(provider === 'naverWcs' ? { inflowDomain: domain.trim() } : {}) };
-      onChange({ ...config, common: editingId ? config.common.map(x => x.id === editingId ? item : x) : [...config.common, item] });
+      const item: CommonScript = { id: editingId ?? crypto.randomUUID(), provider, enabled: editingId ? config.common.find(x => x.id === editingId)?.enabled ?? true : true, trackingId: value, ...(provider === 'naverWcs' ? { inflowDomain: domain.trim().toLowerCase() } : {}) };
+      if (!apply({ ...config, common: editingId ? config.common.map(x => x.id === editingId ? item : x) : [...config.common, item] })) return;
     } else {
-      if (!config.common.some(item => item.provider === provider && item.enabled)) { setError('먼저 해당 매체의 공통 스크립트를 활성화하세요.'); return; }
-      if (provider === 'googleAds' && !/^AW-[0-9]+\/[A-Za-z0-9_-]+$/.test(value)) { setError('AW-숫자/전환라벨 형식으로 입력하세요.'); return; }
-      if (provider !== 'googleAds' && !/^[A-Za-z0-9_-]{1,100}$/.test(value)) { setError('이벤트명은 영문, 숫자, 하이픈, 밑줄만 입력하세요.'); return; }
       const item: ConversionScript = { id: editingId ?? crypto.randomUUID(), provider, enabled: editingId ? config.conversions.find(x => x.id === editingId)?.enabled ?? true : true, event: 'consultation_complete', ...(provider === 'googleAds' ? { sendTo: value } : provider === 'naverWcs' ? { conversionType: value } : { eventName: value }) };
-      onChange({ ...config, conversions: editingId ? config.conversions.map(x => x.id === editingId ? item : x) : [...config.conversions, item] });
+      if (!apply({ ...config, conversions: editingId ? config.conversions.map(x => x.id === editingId ? item : x) : [...config.conversions, item] })) return;
     }
     reset();
   }
   function toggle(itemId: string) {
-    if (tab === 'common') onChange({ ...config, common: config.common.map(x => x.id === itemId ? { ...x, enabled: !x.enabled } : x), conversions: config.conversions.map(x => x.provider === config.common.find(c => c.id === itemId)?.provider ? { ...x, enabled: false } : x) });
+    if (tab === 'common') apply({ ...config, common: config.common.map(x => x.id === itemId ? { ...x, enabled: !x.enabled } : x), conversions: config.conversions.map(x => x.provider === config.common.find(c => c.id === itemId)?.provider ? { ...x, enabled: false } : x) });
     else {
-      const target = config.conversions.find(x => x.id === itemId);
-      if (target && !target.enabled && !config.common.some(x => x.provider === target.provider && x.enabled)) { setError('먼저 해당 매체의 공통 스크립트를 활성화하세요.'); return; }
-      onChange({ ...config, conversions: config.conversions.map(x => x.id === itemId ? { ...x, enabled: !x.enabled } : x) });
+      apply({ ...config, conversions: config.conversions.map(x => x.id === itemId ? { ...x, enabled: !x.enabled } : x) });
     }
   }
   function remove(itemId: string) {
     if (tab === 'common') {
       const removed = config.common.find(x => x.id === itemId);
-      onChange({ ...config, common: config.common.filter(x => x.id !== itemId), conversions: config.conversions.map(x => x.provider === removed?.provider ? { ...x, enabled: false } : x) });
-    } else onChange({ ...config, conversions: config.conversions.filter(x => x.id !== itemId) });
+      if (!apply({ ...config, common: config.common.filter(x => x.id !== itemId), conversions: config.conversions.map(x => x.provider === removed?.provider ? { ...x, enabled: false } : x) })) return;
+    } else if (!apply({ ...config, conversions: config.conversions.filter(x => x.id !== itemId) })) return;
     if (editingId === itemId) reset();
   }
   return <div className="panel"><div className="tabs"><button className={tab === 'common' ? 'selected' : ''} onClick={() => { setTab('common'); reset(); }}>공통 스크립트 <span>{config.common.length}</span></button><button className={tab === 'conversion' ? 'selected' : ''} onClick={() => { setTab('conversion'); reset(); }}>전환 이벤트 <span>{config.conversions.length}</span></button></div>
@@ -167,7 +161,7 @@ function SiteDetail({ workspace, setWorkspace }: { workspace: DemoWorkspace; set
     <div className="notice"><b>데모 전용</b> — 게시와 롤백도 브라우저 메모리에서만 실행됩니다. Firebase, CDN 및 광고 매체에는 반영되지 않습니다.</div>
     <ScriptEditor config={config} onChange={next => setWorkspace(saveDraft(workspace, next))}/>
     <div className="panel section-gap"><div className="panel-head"><h2>설정 변경사항 미리보기</h2><span className={'pill ' + (changed ? 'amber' : 'green')}>{changed ? '게시본과 다름' : '변경 없음'}</span></div>
-      <div className="preview-grid"><div><h3>현재 초안</h3><pre>{JSON.stringify(config, null, 2)}</pre></div><div><h3>마지막 데모 게시본</h3><pre>{latest ? JSON.stringify(latest.config, null, 2) : '게시본 없음'}</pre></div></div>
+      <div className="preview-grid"><div><h3>현재 초안</h3><pre>{JSON.stringify(config, null, 2)}</pre></div><div><h3>마지막 공개 DTO (데모)</h3><pre>{latest ? JSON.stringify(latest.publicConfig, null, 2) : '게시본 없음'}</pre></div></div>
       <div className="panel-actions"><button className="btn primary" onClick={publish} disabled={!changed}>데모 게시</button></div>{error && <p className="error panel-actions">{error}</p>}
     </div>
     <div className="panel section-gap"><div className="panel-head"><h2>데모 릴리스 이력</h2></div>{releases.length ? <ul className="history-list">{releases.map(release => <li key={release.id}><div><b>v{release.version}{release.sourceVersion ? ' · v' + release.sourceVersion + '에서 롤백' : ''}</b><span>{dateText(release.publishedAt)}</span></div><button className="btn secondary" onClick={() => rollback(release.version)} disabled={release.id === latest?.id}>이 버전으로 롤백</button></li>)}</ul> : <p className="empty">데모 게시 이력이 없습니다.</p>}</div>

@@ -1,9 +1,12 @@
+import { parseDraftConfig, projectPublishedConfig } from '@ltm/tracking-core';
 import type { DemoWorkspace, Site, TrackingConfig, TrackingRelease } from '../types/tracking';
 
 const stamp = () => new Date().toISOString();
 export function saveDraft(state: DemoWorkspace, config: TrackingConfig): DemoWorkspace {
+  if (!state.sites.some(site => site.id === config.siteId)) throw new Error('존재하지 않는 사이트의 초안은 저장할 수 없습니다.');
   const current = state.drafts.find(item => item.siteId === config.siteId);
-  const next = { ...structuredClone(config), version: (current?.version ?? 0) + 1 };
+  if (config.version !== (current?.version ?? 0)) throw new Error('초안 버전이 변경되었습니다. 다시 확인하세요.');
+  const next = { ...parseDraftConfig(config, config.siteId), version: config.version + 1 };
   return {
     ...state,
     drafts: [...state.drafts.filter(item => item.siteId !== config.siteId), next],
@@ -12,12 +15,13 @@ export function saveDraft(state: DemoWorkspace, config: TrackingConfig): DemoWor
 }
 
 export function publishDraft(state: DemoWorkspace, siteId: string): DemoWorkspace {
+  if (!state.sites.some(site => site.id === siteId)) throw new Error('존재하지 않는 사이트는 게시할 수 없습니다.');
   const draft = state.drafts.find(item => item.siteId === siteId);
   if (!draft) throw new Error('게시할 초안이 없습니다.');
-  if (new Set(draft.common.map(item => item.provider)).size !== draft.common.length) throw new Error('같은 매체의 공통 스크립트가 중복됐습니다.');
-  if (draft.conversions.some(item => item.enabled && !draft.common.some(common => common.provider === item.provider && common.enabled))) throw new Error('활성 전환 이벤트에는 활성 공통 스크립트가 필요합니다.');
   const version = Math.max(0, ...state.releases.filter(item => item.siteId === siteId).map(item => item.version)) + 1;
-  const release: TrackingRelease = { id: crypto.randomUUID(), siteId, version, config: structuredClone(draft), publishedAt: stamp() };
+  const publishedAt = stamp();
+  const publicConfig = projectPublishedConfig(draft, siteId, version, publishedAt);
+  const release: TrackingRelease = { id: crypto.randomUUID(), siteId, version, config: structuredClone(draft), publicConfig, publishedAt };
   return {
     ...state, releases: [release, ...state.releases],
     audit: [{ id: crypto.randomUUID(), siteId, action: 'publish', summary: `데모 릴리스 v${version} 게시`, at: release.publishedAt }, ...state.audit],
@@ -25,12 +29,15 @@ export function publishDraft(state: DemoWorkspace, siteId: string): DemoWorkspac
 }
 
 export function rollbackRelease(state: DemoWorkspace, siteId: string, targetVersion: number): DemoWorkspace {
+  if (!state.sites.some(site => site.id === siteId)) throw new Error('존재하지 않는 사이트는 롤백할 수 없습니다.');
   const target = state.releases.find(item => item.siteId === siteId && item.version === targetVersion);
   if (!target) throw new Error('선택한 버전을 찾지 못했습니다.');
   const version = Math.max(...state.releases.filter(item => item.siteId === siteId).map(item => item.version)) + 1;
+  const publishedAt = stamp();
   const release: TrackingRelease = {
     id: crypto.randomUUID(), siteId, version, config: structuredClone(target.config),
-    publishedAt: stamp(), sourceVersion: targetVersion,
+    publicConfig: projectPublishedConfig(target.config, siteId, version, publishedAt),
+    publishedAt, sourceVersion: targetVersion,
   };
   return {
     ...state, releases: [release, ...state.releases],

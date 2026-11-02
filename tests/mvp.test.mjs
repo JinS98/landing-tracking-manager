@@ -35,14 +35,15 @@ test('draft, publish and rollback keep release history immutable', () => {
   assert.equal(rolled.drafts.find(draft => draft.siteId === 'coffee-main').version, 2);
 });
 
-test('published parser keeps only supported data and rejects another site', () => {
+test('published parser rejects extra fields and another site', () => {
   const input = {
     schemaVersion: 1, siteId: 'coffee-main', releaseVersion: 1, publishedAt: '2026-10-29T00:00:00Z',
-    common: [{ id: 'one', provider: 'gtm', enabled: true, trackingId: 'GTM-DEMO123', script: 'alert(1)' }],
-    conversions: [], secret: 'should-not-leak',
+    common: [{ id: 'one', provider: 'gtm', enabled: true, trackingId: 'GTM-DEMO123' }],
+    conversions: [],
   };
   const parsed = parsePublishedConfig(input, 'coffee-main');
-  assert.equal('secret' in parsed, false);
-  assert.equal('script' in parsed.common[0], false);
+  assert.equal(parsed.common[0].trackingId, 'GTM-DEMO123');
+  assert.throws(() => parsePublishedConfig({ ...input, secret: 'should-not-leak' }, 'coffee-main'), /Invalid published config/);
+  assert.throws(() => parsePublishedConfig({ ...input, common: [{ ...input.common[0], script: 'alert(1)' }] }, 'coffee-main'), /허용되지 않은 필드/);
   assert.throws(() => parsePublishedConfig(input, 'other-site'), /Invalid published config/);
 });

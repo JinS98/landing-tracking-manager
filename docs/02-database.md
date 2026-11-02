@@ -25,7 +25,7 @@
 
 `trackingConfigs/{siteId}.draft`는 `siteId`, `version`, `common[]`, `conversions[]`를 가진 관리자 편집본입니다. `draftVersion`은 `draft.version`과 같아야 하며 낙관적 잠금 값으로 사용합니다. 매체는 GTM, Google Ads, Naver WCS, 당근, Meta, TikTok의 `gtm`, `googleAds`, `naverWcs`, `karrot`, `meta`, `tiktok`입니다. 공통 설정은 `id`, `provider`, `enabled`, `trackingId`와 매체별 허용 필드, 전환 설정은 `id`, `provider`, `enabled`, `event=consultation_complete`와 `sendTo`·`conversionType`·`eventName` 중 매체별 허용 필드만 갖습니다.
 
-게시는 초안을 검증하고 `schemaVersion=1`, `siteId`, `releaseVersion`, `publishedAt`, `common`, `conversions`만 공개 JSON으로 투영합니다. 이 형식은 `packages/tracking-core/src/index.ts`의 `parsePublishedConfig` 계약을 따릅니다. 업체명, 내부 도메인 정책, 초안, `actorRef`, 감사 로그, 비밀키, 개인정보, 임의 JavaScript/HTML은 공개 JSON에 넣지 않습니다. 현재 파서는 공개 JSON을 **읽을 때** 검증하며, 서버의 게시 시 검증과 JSON 생성은 아직 구현되지 않았습니다.
+게시는 초안을 검증하고 `schemaVersion=1`, `siteId`, `releaseVersion`, `publishedAt`, `common`, `conversions`만 공개 JSON으로 투영합니다. `packages/tracking-core/src/index.ts`의 `parseDraftConfig`, `projectPublishedConfig`, `parsePublishedConfig`가 초안 저장·투영·공개 JSON 읽기에 같은 매체 규칙을 적용합니다. GTM 컨테이너 ID, Google Ads AW ID와 `send_to`, Naver WCS ID·유입 도메인·전환 유형을 검증하고, 활성 전환에는 활성 공통 설정을 요구합니다. 허용되지 않은 필드와 임의 JavaScript/HTML은 거부합니다. 업체명, 내부 도메인 정책, 초안, `actorRef`, 감사 로그, 비밀키, 개인정보는 공개 JSON에 넣지 않습니다. 현재 이 투영은 **브라우저 메모리 데모 게시**에서만 실행되며 서버 게시 검증·JSON 생성과 CDN 배포는 아직 구현되지 않았습니다.
 
 ## 서버 트랜잭션 계약
 

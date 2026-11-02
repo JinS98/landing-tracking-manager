@@ -7,7 +7,7 @@
     "dev": "npm run dev -w @ltm/admin",
     "build": "npm run build -w @ltm/admin",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs tests/registration-cli.test.mjs tests/import.test.mjs",
+    "test": "node --experimental-strip-types --test tests/mvp.test.mjs tests/access.test.mjs tests/registration-cli.test.mjs tests/import.test.mjs tests/tracking-config.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --test tests/firestore-rules.test.mjs\"",
     "test:registration": "firebase emulators:exec --only firestore --project demo-landing-tracking-manager \"node --experimental-strip-types --test tests/registration-firestore.test.mjs\""
   },
