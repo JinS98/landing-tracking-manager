@@ -5,7 +5,7 @@ import ImportPage from './ImportPage';
 import { demoMode } from './lib/firebase';
 import { initialWorkspace, providerLabels } from './lib/demoData';
 import { searchCompanies } from './lib/companySearch';
-import { publishDraft, registerSite, rollbackRelease, saveDraft } from './lib/demoWorkspace';
+import { editScript, publishDraft, registerSite, rollbackRelease, type ScriptEdit } from './lib/demoWorkspace';
 import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type Site, type TrackingConfig } from './types/tracking';
 
 const providers = Object.keys(providerLabels) as Provider[];
@@ -91,7 +91,7 @@ function CompanyDetail({ workspace }: { workspace: DemoWorkspace }) {
   </>;
 }
 
-function ScriptEditor({ config, onChange }: { config: TrackingConfig; onChange: (next: TrackingConfig) => void }) {
+function ScriptEditor({ config, onChange }: { config: TrackingConfig; onChange: (edit: ScriptEdit) => void }) {
   const [tab, setTab] = useState<'common' | 'conversion'>('common');
   const [provider, setProvider] = useState<Provider>('googleAds');
   const [trackingId, setTrackingId] = useState('');
@@ -100,9 +100,13 @@ function ScriptEditor({ config, onChange }: { config: TrackingConfig; onChange: 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const items = tab === 'common' ? config.common : config.conversions;
+  const activeCommonProviders = config.common.filter(item => item.enabled).map(item => item.provider);
+  const selectedProvider = tab === 'conversion' && !editingId && !activeCommonProviders.includes(provider)
+    ? activeCommonProviders[0] ?? provider : provider;
+  const availableProviders = tab === 'common' ? providers : editingId ? [provider] : activeCommonProviders;
   function reset() { setTrackingId(''); setDomain(''); setEventValue(''); setEditingId(null); setError(''); }
-  function apply(next: TrackingConfig): boolean {
-    try { onChange(next); setError(''); return true; }
+  function apply(edit: ScriptEdit): boolean {
+    try { onChange(edit); setError(''); return true; }
     catch (reason) { setError((reason as Error).message); return false; }
   }
   function edit(item: CommonScript | ConversionScript) {
@@ -111,36 +115,33 @@ function ScriptEditor({ config, onChange }: { config: TrackingConfig; onChange: 
     else setEventValue(item.sendTo ?? item.conversionType ?? item.eventName ?? '');
   }
   function save() {
+    if (tab === 'conversion' && !editingId && !activeCommonProviders.includes(selectedProvider)) {
+      setError('먼저 활성 공통 스크립트를 추가하세요.'); return;
+    }
     const value = tab === 'common' ? trackingId.trim() : eventValue.trim();
     if (!value) { setError('필수 입력값을 입력하세요.'); return; }
     if (tab === 'common') {
-      const item: CommonScript = { id: editingId ?? crypto.randomUUID(), provider, enabled: editingId ? config.common.find(x => x.id === editingId)?.enabled ?? true : true, trackingId: value, ...(provider === 'naverWcs' ? { inflowDomain: domain.trim().toLowerCase() } : {}) };
-      if (!apply({ ...config, common: editingId ? config.common.map(x => x.id === editingId ? item : x) : [...config.common, item] })) return;
+      const item: CommonScript = { id: editingId ?? crypto.randomUUID(), provider: selectedProvider, enabled: editingId ? config.common.find(x => x.id === editingId)?.enabled ?? true : true, trackingId: value, ...(selectedProvider === 'naverWcs' ? { inflowDomain: domain.trim().toLowerCase() } : {}) };
+      if (!apply({ kind: 'common', action: editingId ? 'update' : 'add', item })) return;
     } else {
-      const item: ConversionScript = { id: editingId ?? crypto.randomUUID(), provider, enabled: editingId ? config.conversions.find(x => x.id === editingId)?.enabled ?? true : true, event: 'consultation_complete', ...(provider === 'googleAds' ? { sendTo: value } : provider === 'naverWcs' ? { conversionType: value } : { eventName: value }) };
-      if (!apply({ ...config, conversions: editingId ? config.conversions.map(x => x.id === editingId ? item : x) : [...config.conversions, item] })) return;
+      const item: ConversionScript = { id: editingId ?? crypto.randomUUID(), provider: selectedProvider, enabled: editingId ? config.conversions.find(x => x.id === editingId)?.enabled ?? true : true, event: 'consultation_complete', ...(selectedProvider === 'googleAds' ? { sendTo: value } : selectedProvider === 'naverWcs' ? { conversionType: value } : { eventName: value }) };
+      if (!apply({ kind: 'conversion', action: editingId ? 'update' : 'add', item })) return;
     }
     reset();
   }
   function toggle(itemId: string) {
-    if (tab === 'common') apply({ ...config, common: config.common.map(x => x.id === itemId ? { ...x, enabled: !x.enabled } : x), conversions: config.conversions.map(x => x.provider === config.common.find(c => c.id === itemId)?.provider ? { ...x, enabled: false } : x) });
-    else {
-      apply({ ...config, conversions: config.conversions.map(x => x.id === itemId ? { ...x, enabled: !x.enabled } : x) });
-    }
+    apply({ kind: tab, action: 'toggle', id: itemId });
   }
   function remove(itemId: string) {
-    if (tab === 'common') {
-      const removed = config.common.find(x => x.id === itemId);
-      if (!apply({ ...config, common: config.common.filter(x => x.id !== itemId), conversions: config.conversions.map(x => x.provider === removed?.provider ? { ...x, enabled: false } : x) })) return;
-    } else if (!apply({ ...config, conversions: config.conversions.filter(x => x.id !== itemId) })) return;
+    if (!apply({ kind: tab, action: 'remove', id: itemId })) return;
     if (editingId === itemId) reset();
   }
-  return <div className="panel"><div className="tabs"><button className={tab === 'common' ? 'selected' : ''} onClick={() => { setTab('common'); reset(); }}>공통 스크립트 <span>{config.common.length}</span></button><button className={tab === 'conversion' ? 'selected' : ''} onClick={() => { setTab('conversion'); reset(); }}>전환 이벤트 <span>{config.conversions.length}</span></button></div>
+  return <div className="panel"><div className="tabs"><button className={tab === 'common' ? 'selected' : ''} onClick={() => { setTab('common'); reset(); }}>공통 스크립트 <span>{config.common.length}</span></button><button className={tab === 'conversion' ? 'selected' : ''} onClick={() => { setTab('conversion'); setProvider(activeCommonProviders[0] ?? 'googleAds'); reset(); }}>전환 이벤트 <span>{config.conversions.length}</span></button></div>
     <div className="script-list">{items.map(item => <div className="script-row" key={item.id}><div><b>{providerLabels[item.provider]}</b><small>{'trackingId' in item ? item.trackingId : item.sendTo ?? item.conversionType ?? item.eventName}</small></div><div className="row-actions"><label className="toggle"><input type="checkbox" checked={item.enabled} onChange={() => toggle(item.id)}/><span>{item.enabled ? '활성' : '비활성'}</span></label><button className="text-link action-link" onClick={() => edit(item)}>수정</button><button className="link-danger" onClick={() => remove(item.id)}>제거</button></div></div>)}{!items.length && <p className="empty">등록된 설정이 없습니다.</p>}</div>
     <div className="editor"><h3>{editingId ? '설정 수정' : '+ ' + (tab === 'common' ? '공통 스크립트' : '전환 이벤트') + ' 추가'}</h3><div className="form-grid">
-      <label>광고 매체<select value={provider} onChange={event => { setProvider(event.target.value as Provider); setError(''); }} disabled={Boolean(editingId)}>{providers.map(key => <option key={key} value={key}>{providerLabels[key]}</option>)}</select></label>
-      {tab === 'common' ? <><label>추적 ID<input value={trackingId} onChange={event => setTrackingId(event.target.value)} placeholder={provider === 'gtm' ? 'GTM-DEMO123' : provider === 'googleAds' ? 'AW-123456789' : provider === 'meta' ? '123456789012345' : '픽셀/계정 ID'}/></label>{provider === 'naverWcs' && <label>유입 도메인<input value={domain} onChange={event => setDomain(event.target.value)} placeholder="landing.example"/></label>}</> : <label>{provider === 'googleAds' ? 'send_to (AW ID/라벨)' : provider === 'naverWcs' ? '전환 유형' : '이벤트명'}<input value={eventValue} onChange={event => setEventValue(event.target.value)} placeholder={provider === 'googleAds' ? 'AW-123456789/DEMO_LABEL' : provider === 'naverWcs' ? 'lead' : provider === 'karrot' ? 'SubmitApplication' : provider === 'tiktok' ? 'SubmitForm' : 'Lead'}/></label>}
-    </div>{error && <p className="error">{error}</p>}<div className="editor-footer"><small>데모 변경은 메모리에만 저장됩니다.</small><div className="button-row">{editingId && <button className="btn secondary" onClick={reset}>취소</button>}<button className="btn primary" onClick={save}>{editingId ? '수정 저장' : '설정 추가'}</button></div></div></div>
+      <label>광고 매체<select value={selectedProvider} onChange={event => { setProvider(event.target.value as Provider); setError(''); }} disabled={Boolean(editingId) || (tab === 'conversion' && availableProviders.length === 0)}>{availableProviders.length ? availableProviders.map(key => <option key={key} value={key}>{providerLabels[key]}</option>) : <option value={selectedProvider}>활성 공통 설정 없음</option>}</select></label>
+      {tab === 'common' ? <><label>추적 ID<input value={trackingId} onChange={event => setTrackingId(event.target.value)} placeholder={selectedProvider === 'gtm' ? 'GTM-DEMO123' : selectedProvider === 'googleAds' ? 'AW-123456789' : selectedProvider === 'meta' ? '123456789012345' : '픽셀/계정 ID'}/></label>{selectedProvider === 'naverWcs' && <label>유입 도메인<input value={domain} onChange={event => setDomain(event.target.value)} placeholder="landing.example"/></label>}</> : <label>{selectedProvider === 'googleAds' ? 'send_to (AW ID/라벨)' : selectedProvider === 'naverWcs' ? '전환 유형' : '이벤트명'}<input value={eventValue} onChange={event => setEventValue(event.target.value)} placeholder={selectedProvider === 'googleAds' ? 'AW-123456789/DEMO_LABEL' : selectedProvider === 'naverWcs' ? 'lead' : selectedProvider === 'karrot' ? 'SubmitApplication' : selectedProvider === 'tiktok' ? 'SubmitForm' : 'Lead'}/></label>}
+    </div>{tab === 'conversion' && !editingId && !activeCommonProviders.length && <p className="editor-hint">전환 이벤트를 추가하려면 먼저 공통 스크립트를 활성화하세요.</p>}{tab === 'common' && <p className="editor-hint">공통 스크립트를 비활성화하거나 제거하면 연결된 전환 이벤트도 비활성화됩니다.</p>}{error && <p className="error" role="alert">{error}</p>}<div className="editor-footer"><small>데모 변경은 메모리에만 저장됩니다.</small><div className="button-row">{editingId && <button className="btn secondary" onClick={reset}>취소</button>}<button className="btn primary" onClick={save} disabled={tab === 'conversion' && !editingId && !activeCommonProviders.length}>{editingId ? '수정 저장' : '설정 추가'}</button></div></div></div>
   </div>;
 }
 
@@ -159,7 +160,7 @@ function SiteDetail({ workspace, setWorkspace }: { workspace: DemoWorkspace; set
   return <>
     <div className="page-head"><div><NavLink className="back" to={company ? '/companies/' + company.id : '/sites'}>← {company ? company.name : '업체 목록'}</NavLink><h1>{company?.name} · {site.id}</h1><p>{site.domain} · {site.environment} · 초안 v{config.version} · {latest ? '데모 게시 v' + latest.version : '게시본 없음'}</p></div><button className="btn secondary" onClick={() => navigator.clipboard.writeText(JSON.stringify(config, null, 2))}>초안 JSON 복사</button></div>
     <div className="notice"><b>데모 전용</b> — 게시와 롤백도 브라우저 메모리에서만 실행됩니다. Firebase, CDN 및 광고 매체에는 반영되지 않습니다.</div>
-    <ScriptEditor config={config} onChange={next => setWorkspace(saveDraft(workspace, next))}/>
+    <ScriptEditor key={siteId} config={config} onChange={edit => setWorkspace(editScript(workspace, siteId, edit))}/>
     <div className="panel section-gap"><div className="panel-head"><h2>설정 변경사항 미리보기</h2><span className={'pill ' + (changed ? 'amber' : 'green')}>{changed ? '게시본과 다름' : '변경 없음'}</span></div>
       <div className="preview-grid"><div><h3>현재 초안</h3><pre>{JSON.stringify(config, null, 2)}</pre></div><div><h3>마지막 공개 DTO (데모)</h3><pre>{latest ? JSON.stringify(latest.publicConfig, null, 2) : '게시본 없음'}</pre></div></div>
       <div className="panel-actions"><button className="btn primary" onClick={publish} disabled={!changed}>데모 게시</button></div>{error && <p className="error panel-actions">{error}</p>}

@@ -47,7 +47,8 @@
 ## SDK와 실제 랜딩 검증
 
 - [x] 관리자 데모의 초안 추가·게시 DTO를 SDK 설정 응답에 연결한 모의 통합 테스트
-- [ ] 관리자 화면 직접 조작과 운영 게시 API를 통한 SDK 반영 확인
+- [x] 로컬 Edge에서 관리자 데모 화면의 추가·수정·토글·제거·게시 미리보기 조작 확인
+- [ ] 운영 게시 API를 통한 실제 SDK 설정 반영 확인
 - [ ] 6개 매체 공통 로더와 전환 어댑터의 공식 API 및 진단 도구 확인
 - [ ] 참고 코드 확인: app/layout.tsx의 next/script, 완료 페이지의 Google Ads·Meta 호출, mleverage.client.js, Naver WCS 스니펫을 원본과 대조
 - [x] 실제 저장소 코드 확인: 신규 SDK의 랜덤 token 기반 /complete 감지·sessionStorage 중복 키와 선택적 GTM·Ads 어댑터 소스 확인

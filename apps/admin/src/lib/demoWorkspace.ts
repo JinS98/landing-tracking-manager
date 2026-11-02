@@ -1,8 +1,13 @@
 import { parseDraftConfig, projectPublishedConfig } from '@ltm/tracking-core';
-import type { DemoWorkspace, Site, TrackingConfig, TrackingRelease } from '../types/tracking';
+import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Site, type TrackingConfig, type TrackingRelease } from '../types/tracking.ts';
+
+export type ScriptEdit =
+  | { kind: 'common'; action: 'add' | 'update'; item: CommonScript }
+  | { kind: 'conversion'; action: 'add' | 'update'; item: ConversionScript }
+  | { kind: 'common' | 'conversion'; action: 'toggle' | 'remove'; id: string };
 
 const stamp = () => new Date().toISOString();
-export function saveDraft(state: DemoWorkspace, config: TrackingConfig): DemoWorkspace {
+export function saveDraft(state: DemoWorkspace, config: TrackingConfig, description?: string): DemoWorkspace {
   if (!state.sites.some(site => site.id === config.siteId)) throw new Error('존재하지 않는 사이트의 초안은 저장할 수 없습니다.');
   const current = state.drafts.find(item => item.siteId === config.siteId);
   if (config.version !== (current?.version ?? 0)) throw new Error('초안 버전이 변경되었습니다. 다시 확인하세요.');
@@ -10,8 +15,43 @@ export function saveDraft(state: DemoWorkspace, config: TrackingConfig): DemoWor
   return {
     ...state,
     drafts: [...state.drafts.filter(item => item.siteId !== config.siteId), next],
-    audit: [{ id: crypto.randomUUID(), siteId: config.siteId, action: 'draft', summary: `초안 v${next.version} 수정`, at: stamp() }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId: config.siteId, action: 'draft', summary: description ? `초안 v${next.version} · ${description}` : `초안 v${next.version} 수정`, at: stamp() }, ...state.audit],
   };
+}
+
+/** Apply one editor action, then validate and store the entire draft atomically. */
+export function editScript(state: DemoWorkspace, siteId: string, edit: ScriptEdit): DemoWorkspace {
+  const config = state.drafts.find(item => item.siteId === siteId) ?? emptyConfig(siteId);
+  const entries = edit.kind === 'common' ? config.common : config.conversions;
+  const target = 'id' in edit ? entries.find(item => item.id === edit.id) : entries.find(item => item.id === edit.item.id);
+  let next: TrackingConfig;
+  if (edit.action === 'add') {
+    if (target) throw new Error('이미 있는 설정 ID입니다.');
+    next = edit.kind === 'common'
+      ? { ...config, common: [...config.common, edit.item] }
+      : { ...config, conversions: [...config.conversions, edit.item] };
+  } else if (edit.action === 'update') {
+    if (!target || target.provider !== edit.item.provider) throw new Error('수정할 설정이 없거나 매체가 다릅니다.');
+    next = edit.kind === 'common'
+      ? { ...config, common: config.common.map(item => item.id === edit.item.id ? edit.item : item) }
+      : { ...config, conversions: config.conversions.map(item => item.id === edit.item.id ? edit.item : item) };
+  } else {
+    if (!('id' in edit)) throw new Error('변경할 설정 ID가 없습니다.');
+    if (!target) throw new Error('변경할 설정을 찾지 못했습니다.');
+    const id = edit.id;
+    if (edit.kind === 'common') {
+      const common = edit.action === 'remove' ? config.common.filter(item => item.id !== id)
+        : config.common.map(item => item.id === id ? { ...item, enabled: !item.enabled } : item);
+      const disabling = edit.action === 'remove' || target.enabled;
+      next = { ...config, common, conversions: disabling ? config.conversions.map(item => item.provider === target.provider ? { ...item, enabled: false } : item) : config.conversions };
+    } else {
+      next = { ...config, conversions: edit.action === 'remove' ? config.conversions.filter(item => item.id !== id)
+        : config.conversions.map(item => item.id === id ? { ...item, enabled: !item.enabled } : item) };
+    }
+  }
+  const action = { add: '추가', update: '수정', toggle: target?.enabled ? '비활성화' : '활성화', remove: '제거' }[edit.action];
+  const provider = target?.provider ?? ('item' in edit ? edit.item.provider : '');
+  return saveDraft(state, next, `${edit.kind === 'common' ? '공통 스크립트' : '전환 이벤트'} ${action} (${provider})`);
 }
 
 export function publishDraft(state: DemoWorkspace, siteId: string): DemoWorkspace {
