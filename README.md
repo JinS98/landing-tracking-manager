@@ -10,7 +10,7 @@
 
 - apps/admin: React 관리자 UI와 메모리 기반 데모 상태. 로그인 화면과 운영 쓰기 연결이 없습니다.
 - packages/tracking-core: 공개 게시 설정의 타입과 허용 필드 검증.
-- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 GTM·Google Ads·Naver WCS 어댑터. 나머지 세 매체 어댑터는 아직 없습니다.
+- packages/tracking-sdk: 공개 게시 설정 로더, 중복 방지, 라우트 감지, 매체 어댑터 인터페이스와 선택적으로 주입하는 6개 매체 어댑터. 실제 랜딩 적용과 배포 번들은 아직 없습니다.
 - functions: 향후 사내 접근 게이트 뒤의 관리자 쓰기 API와 공개 SDK 조회 API. 현재는 접근 검사와 서버 전용 사이트 등록 트랜잭션만 있으며 HTTP API는 없음.
 - packages/landing-register: 배포 파이프라인용 등록 CLI. 기본 실행은 dry run이고 실제 API 연결은 미완료.
 
@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | `@ltm/admin` | `@ltm/tracking-core`의 초안·공개 설정 계약 사용 | `npm run dev`로 메모리 데모, `npm run build`로 관리자 정적 빌드 |
 | `@ltm/tracking-core` | 내부 패키지 의존 없음 | 공개 게시 설정 타입과 검증 함수의 타입 검사 |
-| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사와 GTM·Ads·Naver 어댑터 모의 DOM 테스트. 배포 번들은 미구현 |
+| `@ltm/tracking-sdk` | `@ltm/tracking-core` 사용 | SDK 소스 타입 검사와 6개 매체 어댑터 모의 DOM 테스트. 배포 번들은 미구현 |
 | `@ltm/functions` | 서버 전용 Firebase Admin SDK 사용 | 접근 검사와 등록 트랜잭션의 타입 검사·로컬 에뮬레이터 테스트. HTTP API는 미구현 |
 | `@ltm/landing-register` | 내부 패키지 의존 없음 | Node.js 22.14+ 등록 CLI의 입력 검사·dry run·향후 인증 API 요청 |
 

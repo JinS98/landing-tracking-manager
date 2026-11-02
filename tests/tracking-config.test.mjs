@@ -14,15 +14,15 @@ test('six providers share the draft and public DTO contract', () => {
     { id: 'ads', provider: 'googleAds', enabled: true, trackingId: 'AW-123456789' },
     { id: 'naver', provider: 'naverWcs', enabled: true, trackingId: 'naver-demo', inflowDomain: 'landing.example' },
     { id: 'karrot', provider: 'karrot', enabled: true, trackingId: 'karrot-demo' },
-    { id: 'meta', provider: 'meta', enabled: true, trackingId: 'meta-demo' },
-    { id: 'tiktok', provider: 'tiktok', enabled: true, trackingId: 'tiktok-demo' },
+    { id: 'meta', provider: 'meta', enabled: true, trackingId: '123456789012345' },
+    { id: 'tiktok', provider: 'tiktok', enabled: true, trackingId: 'TIKTOKDEMO123' },
   ], conversions: [
     { id: 'gtm-event', provider: 'gtm', enabled: true, event: 'consultation_complete', eventName: 'lead_complete' },
     { id: 'ads-event', provider: 'googleAds', enabled: true, event: 'consultation_complete', sendTo: 'AW-123456789/DEMO_LABEL' },
     { id: 'naver-event', provider: 'naverWcs', enabled: true, event: 'consultation_complete', conversionType: 'lead' },
-    { id: 'karrot-event', provider: 'karrot', enabled: true, event: 'consultation_complete', eventName: 'Lead' },
+    { id: 'karrot-event', provider: 'karrot', enabled: true, event: 'consultation_complete', eventName: 'SubmitApplication' },
     { id: 'meta-event', provider: 'meta', enabled: true, event: 'consultation_complete', eventName: 'Lead' },
-    { id: 'tiktok-event', provider: 'tiktok', enabled: true, event: 'consultation_complete', eventName: 'Lead' },
+    { id: 'tiktok-event', provider: 'tiktok', enabled: true, event: 'consultation_complete', eventName: 'SubmitForm' },
   ] };
   assert.deepEqual(parseDraftConfig(draft, 'coffee-main'), draft);
   const publicConfig = projectPublishedConfig(draft, 'coffee-main', 1, publishedAt);

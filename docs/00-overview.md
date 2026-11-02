@@ -42,7 +42,7 @@ MVP 로그인 UI, 직원별 업체 권한 관리 UI, 임의 JavaScript 실행, M
 | 상태 | 내용 |
 |---|---|
 | 참고 코드 확인 | 사용자 제공 사례: Next.js + TypeScript 랜딩, app/layout.tsx의 next/script 공통 태그, mleverage.client.js, /complete?token 이동, 완료 페이지의 sessionStorage 중복 방지 및 Google Ads·Meta 전환 호출, Naver WCS 사용 경험. 원본 코드는 이번 작업에서 열지 않았다. |
-| 실제 저장소 코드 확인 | 이 저장소의 관리자 데모·tracking-core·tracking-sdk와 GTM·Ads·Naver 어댑터 소스를 직접 확인했다. 실제 랜딩과 완료 페이지는 포함되지 않는다. |
+| 실제 저장소 코드 확인 | 이 저장소의 관리자 데모·tracking-core·tracking-sdk와 6개 매체 어댑터 소스를 직접 확인했다. 실제 랜딩과 완료 페이지는 포함되지 않는다. |
 | 운영 환경 검증 필요 | 현재 운영 랜딩의 설치 경로와 문의 성공 조건, GTM 내부 태그·트리거, Naver WCS 호출 버전, 광고 플랫폼 수신 결과. |
 
 기존 랜딩의 태그 위치와 문의 성공 조건을 운영 코드와 대조하기 전에는 태그 교체를 완료로 표시하지 않습니다. 상세 조사표와 중복 실행을 막는 이전 순서는 [1일차 기록](daily/day-01.md)에 있습니다.

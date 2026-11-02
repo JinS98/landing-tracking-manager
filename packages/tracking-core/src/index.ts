@@ -38,6 +38,8 @@ function parseTags(commonInput: unknown, conversionInput: unknown): { common: Co
     if (item.provider === 'gtm' && !/^GTM-[A-Z0-9]+$/.test(item.trackingId)) throw new Error('GTM ID 형식이 올바르지 않습니다.');
     if (item.provider === 'googleAds' && !/^AW-[0-9]+$/.test(item.trackingId)) throw new Error('Google Ads AW ID 형식이 올바르지 않습니다.');
     if (item.provider === 'naverWcs' && !safeDomain(item.inflowDomain)) throw new Error('Naver 유입 도메인이 올바르지 않습니다.');
+    if (item.provider === 'meta' && !/^[0-9]{1,30}$/.test(item.trackingId)) throw new Error('Meta Pixel ID 형식이 올바르지 않습니다.');
+    if (item.provider === 'tiktok' && !/^[A-Za-z0-9]{1,100}$/.test(item.trackingId)) throw new Error('TikTok Pixel ID 형식이 올바르지 않습니다.');
     return { id: item.id, provider: item.provider, enabled: item.enabled, trackingId: item.trackingId,
       ...(item.provider === 'naverWcs' ? { inflowDomain: item.inflowDomain as string } : {}) };
   });
@@ -56,6 +58,10 @@ function parseTags(commonInput: unknown, conversionInput: unknown): { common: Co
       throw new Error('Naver 전환 유형이 올바르지 않습니다. 구매 전환에는 금액이 필요하며 현재 설정에서 지원하지 않습니다.');
     }
     if (item.provider !== 'googleAds' && item.provider !== 'naverWcs' && !safeId(item.eventName)) throw new Error('전환 이벤트명이 올바르지 않습니다.');
+    const supportedEvents: Partial<Record<Provider, string>> = { karrot: 'SubmitApplication', meta: 'Lead', tiktok: 'SubmitForm' };
+    if (supportedEvents[item.provider] && item.eventName !== supportedEvents[item.provider]) {
+      throw new Error(`${item.provider}의 상담 완료 전환 이벤트명이 올바르지 않습니다.`);
+    }
     const matchingCommon = common.find(tag => tag.provider === item.provider);
     if (item.enabled && !matchingCommon?.enabled) throw new Error('활성 전환 이벤트에는 활성 공통 설정이 필요합니다.');
     if (item.provider === 'googleAds' && item.enabled && matchingCommon && (item.sendTo as string).split('/')[0] !== matchingCommon.trackingId) {
