@@ -31,6 +31,7 @@
 ## 현재 주요 기능
 
 - 가상 업체 전체 검색, 업체별 여러 사이트 선택, siteId 중복을 막는 데모 등록
+- `.xlsx` 첫 시트 열 매핑·미리보기·중복 건너뛰기·오류 보고를 제공하는 메모리 데모 일괄 등록. 서버 업로드 API는 미구현
 - 대시보드의 업체·사이트·활성 매체·SDK 확인 현황 및 최근 변경 이력
 - 6개 매체(GTM, Google Ads, Naver WCS, 당근, Meta, TikTok)의 공통 태그와 전환 이벤트 설정 추가·수정·비활성화·제거
 - 초안과 데모 게시본 비교, 메모리 내 게시·롤백 및 이력
@@ -52,7 +53,7 @@
     npm install
     npm run dev
 
-브라우저에서 http://localhost:5173 을 엽니다. 별도 계정이나 Firebase 설정은 필요하지 않습니다. 업체 관리에서 가상 사이트를 등록하고, 설정 편집 → 미리보기 → 데모 게시 → 롤백을 시험할 수 있습니다. 새로고침하면 데모 상태가 초기화됩니다. apps/admin/.env.example의 플래그를 바꿔도 운영 쓰기는 활성화되지 않습니다.
+브라우저에서 http://localhost:5173 을 엽니다. 별도 계정이나 Firebase 설정은 필요하지 않습니다. 업체 관리에서 가상 사이트를 등록하고, 엑셀 일괄 등록에서 `.xlsx` 파일의 첫 시트를 미리 볼 수 있습니다. 엑셀 헤더 예시는 `companyId | companyName | siteId | domain`이며 ID와 도메인은 텍스트 셀로 입력합니다. 일괄 등록은 최대 2MB·500행의 데모이며 유효한 행만 메모리에 추가합니다. 설정 편집 → 미리보기 → 데모 게시 → 롤백도 시험할 수 있습니다. 새로고침하면 데모 상태가 초기화됩니다. apps/admin/.env.example의 플래그를 바꿔도 운영 쓰기는 활성화되지 않습니다.
 
 등록 CLI dry run은 Node.js 22.14+에서 `npm run register -w @ltm/landing-register -- --site-id sample-site --company-id sample-company --domain landing.example --environment staging`으로 실행합니다. `--apply`는 회사의 인증된 등록 API가 마련된 뒤 배포 파이프라인에서만 사용합니다.
 

@@ -22,12 +22,23 @@ export type ConversionScript = {
 export type TrackingConfig = { siteId: string; version: number; common: CommonScript[]; conversions: ConversionScript[] };
 export type TrackingRelease = { id: string; siteId: string; version: number; config: TrackingConfig; publishedAt: string; sourceVersion?: number };
 export type AuditEntry = { id: string; siteId: string; action: 'draft' | 'publish' | 'rollback' | 'register'; summary: string; at: string };
+export type ImportJob = {
+  id: string;
+  fileName: string;
+  status: 'completed' | 'partial';
+  createdCount: number;
+  skippedCount: number;
+  errorCount: number;
+  errors: { rowNumber: number; message: string }[];
+  createdAt: string;
+};
 export type DemoWorkspace = {
   companies: Company[];
   sites: Site[];
   drafts: TrackingConfig[];
   releases: TrackingRelease[];
   audit: AuditEntry[];
+  importJobs: ImportJob[];
 };
 
 export const emptyConfig = (siteId: string): TrackingConfig => ({ siteId, version: 0, common: [], conversions: [] });

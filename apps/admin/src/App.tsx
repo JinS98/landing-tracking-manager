@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { Activity, Building2, Code2, History, LayoutDashboard, Plus, Search, ShieldCheck } from 'lucide-react';
+import { Activity, Building2, Code2, FileSpreadsheet, History, LayoutDashboard, Plus, Search, ShieldCheck } from 'lucide-react';
+import ImportPage from './ImportPage';
 import { demoMode } from './lib/firebase';
 import { initialWorkspace, providerLabels } from './lib/demoData';
 import { searchCompanies } from './lib/companySearch';
@@ -11,6 +12,7 @@ const providers = Object.keys(providerLabels) as Provider[];
 const menu = [
   { to: '/', label: '대시보드', icon: LayoutDashboard, end: true },
   { to: '/sites', label: '업체 관리', icon: Building2, end: false },
+  { to: '/imports', label: '엑셀 일괄 등록', icon: FileSpreadsheet, end: false },
   { to: '/releases', label: '배포 이력', icon: History, end: false },
   { to: '/diagnostics', label: '설치 진단', icon: Activity, end: false },
 ];
@@ -184,6 +186,7 @@ export default function App() {
   return <div className="shell"><Sidebar/><main className="main"><header className="topbar"><span>Workspace / Tracking</span><span className="demo-label">{demoMode ? 'DEMO MODE · 운영 쓰기 차단' : ''}</span></header><div className="content"><Routes>
     <Route path="/" element={<Dashboard workspace={workspace}/>}/>
     <Route path="/sites" element={<Sites workspace={workspace} setWorkspace={setWorkspace}/>}/>
+    <Route path="/imports" element={<ImportPage workspace={workspace} setWorkspace={setWorkspace}/>}/>
     <Route path="/companies/:companyId" element={<CompanyDetail workspace={workspace}/>}/>
     <Route path="/sites/:siteId" element={<SiteDetail workspace={workspace} setWorkspace={setWorkspace}/>}/>
     <Route path="/releases" element={<Releases workspace={workspace}/>}/>

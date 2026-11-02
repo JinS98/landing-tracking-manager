@@ -26,4 +26,5 @@ export const initialWorkspace: DemoWorkspace = {
   }],
   releases: [],
   audit: [],
+  importJobs: [],
 };

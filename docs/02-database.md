@@ -2,7 +2,7 @@
 
 ## 현재 상태와 적용 범위
 
-현재 관리자 화면은 브라우저 메모리 데모이며 Firestore에 연결하지 않습니다. `firebase.json`, `firestore.rules`, `firestore.indexes.json`은 로컬 검증과 향후 운영 구현을 위한 파일이고 실제 Firebase 프로젝트에는 배포되지 않았습니다. 5일차에 `registerSite`의 서버 전용 트랜잭션은 구현해 로컬 에뮬레이터에서 검증했습니다. 초안 저장·게시·롤백과 HTTP API는 여전히 **서버 구현 계약**입니다.
+현재 관리자 화면은 브라우저 메모리 데모이며 Firestore에 연결하지 않습니다. `firebase.json`, `firestore.rules`, `firestore.indexes.json`은 로컬 검증과 향후 운영 구현을 위한 파일이고 실제 Firebase 프로젝트에는 배포되지 않았습니다. 5일차에 `registerSite`의 서버 전용 트랜잭션은 구현해 로컬 에뮬레이터에서 검증했습니다. 7일차 엑셀 importJobs도 **메모리 데모만** 구현했습니다. 초안 저장·게시·롤백과 일괄 등록 HTTP API는 여전히 **서버 구현 계약**입니다.
 
 ## 문서 ID와 관계
 
@@ -13,7 +13,7 @@
 | `trackingConfigs/{siteId}` | sites와 동일 | `draft`, `draftVersion`, `publishedVersion`, `updatedAt`, `updatedBy` | 초안 포함, 관리자 전용 |
 | `trackingReleases/{siteId}__v{version}` | 사이트·릴리스 버전으로 결정 | `siteId`, `version`, `config`, `publishedAt`, `actorRef`, `sourceDraftVersion`, `sourceVersion?` | 내부 이력. `config`만 공개 JSON의 원본 |
 | `auditLogs/{logId}` | 서버 생성 ID | `siteId`, `action`, `actorRef`, `createdAt`, `beforeVersion`, `afterVersion`, `summary` | 관리자 전용, 추가 전용 |
-| `importJobs/{jobId}` | 배포 작업별 멱등 키 | `source`, `status`, `createdCount`, `skippedCount`, `errorCount`, `createdAt`, `updatedAt` | 관리자/배포 주체 전용 |
+| `importJobs/{jobId}` | 서버가 검증한 파일 내용·열 매핑의 멱등 키 | `source`, `status`, `createdCount`, `skippedCount`, `errorCount`, `createdAt`, `updatedAt`, `actorRef`, `fileDigest`, `mappingDigest` | 관리자/배포 주체 전용. 현재는 Firestore 미구현 |
 
 `createdAt`, `updatedAt`, `publishedAt`은 운영 저장 시 서버 기준 Firestore Timestamp를 사용하고, 공개 JSON의 `publishedAt`만 ISO 8601 문자열로 변환할 계획입니다. 현재 데모의 문자열 시각과 서버 저장 형식은 구분합니다. 업체 한 곳에 사이트 여러 개가 속합니다. 삭제·이관 정책은 미정이며 운영 구현 전에 정해야 합니다.
 
@@ -37,6 +37,12 @@
 등록 트랜잭션은 [Firebase 트랜잭션 지침](https://firebase.google.com/docs/firestore/manage-data/transactions)에 따라 모든 문서 읽기를 쓰기 전에 수행하고, 재시도될 수 있는 콜백 안에서 외부 API 호출이나 로그 전송 같은 부수 효과를 실행하지 않습니다.
 
 현재 `apps/admin/src/lib/demoWorkspace.ts`는 메모리 데모 동작을 보여 주며 서버 트랜잭션·동시성·CDN 배포를 보장하지 않습니다. 별도 `functions/src/registerSite.ts`의 사이트 등록은 로컬 에뮬레이터에서 멱등성·동시 요청·초안 보존을 시험했습니다. 초안 버전 관리, 게시·롤백, 운영 접근 제어와 실제 Firestore 배포는 구현과 테스트가 필요합니다.
+
+## 7일차 일괄 등록 계약
+
+데모는 `.xlsx` 첫 시트의 `companyId`, `companyName`, `siteId`, `domain` 네 열을 사용자가 연결해 최대 500개 데이터 행을 미리 봅니다. 파일은 브라우저에서만 읽고, `importJobs` 이력도 메모리에만 둡니다. 기존 업체의 이름이 다르거나 기존 siteId가 다른 업체·도메인을 가리키면 오류로 표시합니다. 같은 siteId·업체·도메인은 건너뛰며 기존 `trackingConfigs`를 수정하지 않습니다. 새 업체와 사이트는 유효한 행만 추가합니다. 같은 파일 내용과 열 매핑의 재적용은 작업 ID로 멱등 처리합니다. 페이지 새로고침 후 이 데모 이력은 사라집니다.
+
+운영 구현에서는 인증된 관리자만 미리보기와 확정을 요청합니다. 서버가 파일 크기·형식·행 수·열 매핑·모든 필드를 다시 검사하고 파일 및 매핑 digest를 구합니다. 미리보기 결과는 확정 시점의 쓰기 권한이나 siteId 고유성 보장이 아닙니다. 확정 요청은 파일 digest·매핑 digest·검증된 actor에 묶인 작업 ID를 사용하고, 서버가 `importJobs/{jobId}`를 트랜잭션으로 선점해 동시 재요청을 막아야 합니다. 각 업체·사이트 생성은 서버 트랜잭션에서 현재 문서를 다시 읽고 충돌을 판정합니다. 동일한 사이트 재시도는 건너뛰고 초안·릴리스를 보존합니다. 작업 상태는 `running` → `completed`/`partial`/`failed`로 기록하고, 행별 오류는 관리자 전용 결과로 제한합니다. 원본 파일·운영 자격 증명·광고주 개인정보를 공개 설정이나 감사 로그에 복사하지 않습니다. 이 운영 흐름과 회사 생성 권한 정책은 아직 구현되지 않았습니다.
 
 ## 계획된 조회와 인덱스
 

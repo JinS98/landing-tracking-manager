@@ -22,6 +22,9 @@
 | POST /admin/sites/{siteId}/publish | expectedVersion | 원자적 릴리스 생성, 공개 JSON 배포 |
 | POST /admin/sites/{siteId}/rollback | targetVersion | 이전 내용을 새 릴리스로 게시 |
 | GET /admin/sites/{siteId}/history | cursor | 권한 확인 후 감사/릴리스 조회 |
+| POST /admin/imports/preview | `.xlsx` 파일, 열 매핑 | 관리자 접근 검사 후 서버가 파일과 각 행을 재검증하고 등록·건너뜀·오류 미리보기 반환. 미구현 |
+| POST /admin/imports | `.xlsx` 파일, 열 매핑, 미리보기 digest | 관리자 접근 검사 후 파일·매핑을 다시 검증, importJobs 멱등 선점과 행별 트랜잭션 처리. 미구현 |
+| GET /admin/imports/{jobId} | 작업 ID | 관리자 접근 검사 후 상태·건수·행별 오류 조회. 미구현 |
 
 ## 배포 주체 등록 계약
 
