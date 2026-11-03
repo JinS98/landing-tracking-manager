@@ -7,7 +7,7 @@
 - Firebase 프로젝트 `landing-tracking`에 서울 리전 Firestore 기본 데이터베이스와 브라우저 직접 접근을 차단하는 Rules·인덱스를 만들었습니다.
 - 관리자 Google 로그인, 계정 제한, 업체·사이트 등록, 엑셀 일괄 등록, 초안 저장, 게시·롤백, 감사 이력, 공개 설정 및 SDK 진단 HTTP 함수의 코드를 연결했습니다. 로컬 에뮬레이터 통합 테스트는 통과했습니다.
 - `npm run build`는 운영 관리자 화면과 `/sdk/landing-tracking-sdk.iife.js` 번들을 만듭니다.
-- Google 로그인 제공자는 Firebase에 배포했고 `pixel-manager.web.app`을 승인 도메인으로 확인했습니다. **Functions와 새 관리자 화면은 아직 라이브에 배포되지 않았습니다.** `landing-tracking` 프로젝트의 결제 API가 비활성으로 응답해 Cloud Functions 배포가 거부됐습니다. 현재 `https://pixel-manager.web.app`은 이전 정적 데모입니다.
+- Google 로그인 제공자, 관리자·공개 설정·진단 Functions 3개, Firestore Rules·인덱스, 관리자 화면과 SDK 번들을 `landing-tracking` 프로젝트에 배포했습니다. 관리자 주소는 https://pixel-manager.web.app 입니다. 라이브에서 로그인 화면과 비로그인 API 차단, 미게시 설정 응답, SDK 파일 제공을 확인했습니다. 실제 계정 로그인과 게시 설정의 정상 조회는 아직 수동 검증이 필요합니다.
 - 실제 랜딩 소스는 이 저장소에 없습니다. 랜딩에 SDK와 문의 성공 처리 코드를 넣는 작업은 사이트 담당자가 수행합니다.
 
 ## 구성
@@ -52,4 +52,4 @@ npm run test:stack
 
 ## 배포
 
-`landing-tracking`에 결제 계정이 연결되면 Functions·Hosting을 배포합니다. 서버의 `ADMIN_EMAIL`은 배포 환경에서만 설정하며 저장소에 커밋하지 않습니다. 명령과 랜딩 설치 절차는 [운영 연결 가이드](docs/08-live-integration.md)에 있습니다. 20일차 정적 데모의 당시 상태는 [배포 기록](docs/07-deployment.md)에 남겨 두었습니다.
+`landing-tracking`에 Functions·Firestore·Hosting이 배포됐습니다. 서버의 `ADMIN_EMAIL`은 배포 환경에서만 설정하며 저장소에 커밋하지 않습니다. 명령과 랜딩 설치 절차는 [운영 연결 가이드](docs/08-live-integration.md)에 있습니다. 배포와 복구는 [배포 기록](docs/07-deployment.md)에 정리했습니다.

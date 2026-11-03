@@ -12,14 +12,16 @@
     npm run test:registration
     npm run test:public-config
     npm run test:release
+    npm run test:api
+    npm run test:stack
 
-`npm run test:rules`는 Firebase CLI와 Java 21이 설치된 환경에서 로컬 Firestore 에뮬레이터를 시작합니다. `demo-` 프로젝트만 사용하고 실제 Firebase에 접속하지 않습니다. 현재 익명 REST의 여섯 컬렉션 조회·목록·생성·수정·삭제 및 중첩 경로 거부 테스트 7개가 통과했습니다. 인증된 클라이언트, 서버 IAM, 실제 Rules 배포와 인덱스 빌드는 검증되지 않았습니다.
+`npm run test:rules`는 Firebase CLI와 Java 21이 설치된 환경에서 로컬 Firestore 에뮬레이터를 시작합니다. `demo-` 프로젝트만 사용하고 실제 Firebase에 접속하지 않습니다. 현재 익명 REST의 여섯 컬렉션 조회·목록·생성·수정·삭제 및 중첩 경로 거부 테스트 7개가 통과했습니다. Rules·인덱스는 운영 프로젝트에 배포했으며, 인증된 클라이언트의 실제 거부와 서버 IAM 최소 권한은 검증되지 않았습니다.
 
 `npm run test:registration`은 같은 `demo-` 에뮬레이터에서 서버 전용 등록 트랜잭션의 동일 입력 재시도, 도메인·업체·환경 충돌, 기존 초안 보존, 동시 요청, 자격 증명 검사 계약을 시험합니다. 실제 배포 주체 검증기·HTTP API·운영 IAM은 시험하지 않습니다.
 
-`npm run test:public-config`는 `demo-` 에뮬레이터에서 게시 포인터와 불변 릴리스 조회, Firestore Timestamp 변환, 릴리스 누락 오류를 시험합니다. `npm test`의 로컬 HTTP 테스트는 공개 DTO만 반환하는지, siteId·CORS·ETag·304·캐시 재검증을 시험합니다. 실제 배포 서버와 CDN은 검증하지 않습니다.
+`npm run test:public-config`는 `demo-` 에뮬레이터에서 게시 포인터와 불변 릴리스 조회, Firestore Timestamp 변환, 릴리스 누락 오류를 시험합니다. `npm test`의 로컬 HTTP 테스트는 공개 DTO만 반환하는지, siteId·CORS·ETag·304·캐시 재검증을 시험합니다. 라이브에서는 미게시 설정의 404만 확인했으며 게시본 응답과 캐시는 미검증입니다.
 
-`npm run test:release`는 같은 에뮬레이터에서 접근 검사 누락 거부, 초안 버전 충돌, 변경 없는 게시 거부, 동시 쓰기, 불변 릴리스와 새 번호로 롤백, 공개 조회 포인터 갱신을 시험합니다. 실제 회사 게이트·관리자 HTTP·CDN은 시험하지 않습니다.
+`npm run test:release`는 같은 에뮬레이터에서 접근 검사 누락 거부, 초안 버전 충돌, 변경 없는 게시 거부, 동시 쓰기, 불변 릴리스와 새 번호로 롤백, 공개 조회 포인터 갱신을 시험합니다. `npm run test:api`는 관리자 HTTP와 공개 설정의 로컬 연계를 검사합니다. 로그인한 운영 계정으로 라이브 게시·롤백은 미검증입니다.
 
 `npm run test:hosting`은 정적 관리자 빌드를 Hosting 에뮬레이터에 올려 기본·깊은 경로와 Edge 렌더링을 확인합니다. 로컬 에뮬레이터는 이 구성의 응답 헤더를 실제 Hosting과 동일하게 제공하지 않아, 캐시·CSP는 라이브 `node tests/hosting-smoke.test.mjs https://pixel-manager.web.app`에서 검증합니다. 이는 운영 API나 SDK 광고 수신 검증이 아닙니다.
 
@@ -43,13 +45,13 @@
 
 - [ ] 익명·권한 없는 관리자 API 쓰기/게시/롤백 401/403
 - [x] 접근 검사 조합 함수의 미설정·위조 헤더·만료 세션·CSRF 실패·범위 부족 부정 테스트
-- [ ] 실제 회사 게이트의 헤더 제거·직접 우회 차단·세션 철회·CSRF 연동 검증
+- [ ] 실제 Firebase 로그인 계정의 API 허용·거부, 세션 철회·Origin 검사 검증
 - [x] 로컬 Firestore 에뮬레이터에서 익명 직접 쓰기·초안 읽기 거부
 - [ ] 인증된 브라우저의 직접 접근 거부와 운영 Rules 배포 상태 확인
 - [x] 로컬 Firestore 에뮬레이터에서 siteId 중복·동시 요청·초안 보존 검증
 - [ ] 실제 인증된 등록 API와 배포 파이프라인, 운영 Firestore에서 동일 시나리오 검증
 - [x] 로컬 에뮬레이터에서 expectedVersion 충돌 409, 릴리스 버전 단조 증가, 롤백 새 버전 생성
-- [ ] 운영 관리자 HTTP와 회사 인증 게이트를 통한 동일 시나리오 검증
+- [ ] 운영 관리자 HTTP와 Firebase 로그인 계정을 통한 동일 시나리오 검증
 - [x] 로컬 공개 HTTP 핸들러는 게시본만 반환하고 비밀/초안/감사 정보 제외
 - [ ] CDN ETag/TTL/무효화, 게시 실패 시 이전 버전 유지
 
@@ -76,4 +78,4 @@
 
 ## 운영 완료 기준
 
-위 서버·SDK 항목이 통과하고 사내 접근 게이트, 운영 Firestore Rules, 실사이트 태그 인벤토리, 게시/롤백 절차가 검증되기 전에는 운영 배포 완료로 표시하지 않습니다. 현재 완료된 것은 메모리 데모 UI의 정적 Hosting 배포, SDK 공통 구조, 초안·공개 DTO 공통 검증과 로컬 자동 테스트, Rules·등록 트랜잭션의 에뮬레이터 검사, 타입/빌드 검사입니다.
+Firebase Auth·Firestore Rules·Functions·Hosting 및 SDK 번들은 라이브에 배포했습니다. 비로그인 API 차단과 공개 URL의 응답은 확인했습니다. 실제 관리자 계정의 사이트 등록·게시·롤백, 실사이트 태그 인벤토리, `/complete` 전환과 광고 플랫폼 수신이 확인되기 전까지 실사이트 운영 검증 완료로 표시하지 않습니다.

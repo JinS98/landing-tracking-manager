@@ -1,6 +1,13 @@
 # 20일차 — 운영 배포 및 문서화
 
-이 문서는 20일차 배포·검증 기록입니다. **정적 데모 관리자만** Firebase Hosting에 공개했고 운영 MVP는 아직 완료되지 않았습니다.
+이 문서는 20일차 당시의 정적 데모 배포·검증 기록입니다. 아래 작업 메모는 당시 상태를 보존합니다. 이후 라이브 전환 결과는 다음 절과 [운영 배포 문서](../07-deployment.md)에 기록했습니다.
+
+## 2026-11-03 라이브 전환
+
+- `landing-tracking`의 Blaze 결제 연결 확인 후 서울 리전 Functions 3개(관리자 API, 공개 설정, 진단)를 배포하고 Artifact Registry 이미지 7일 자동 정리 정책을 적용했다.
+- Firestore Rules·인덱스, 운영 관리자 화면, SDK 번들을 Hosting 사이트 `pixel-manager`에 배포했다. 주소는 https://pixel-manager.web.app 이다.
+- 라이브 HTTP에서 `/` 200, 비로그인 `/api/workspace` 401, 미게시 설정 `/tracking-config` 404, SDK 번들 200을 확인했다. Edge에서 Google 로그인 화면과 JavaScript 오류 없음도 확인했다.
+- 실제 관리자 계정으로 로그인한 CRUD·게시·롤백과 랜딩 사이트의 SDK 삽입·광고 매체 수신은 검증하지 않았다. 랜딩 소스는 사용자가 추후 제공하며 SDK 설치는 사용자가 진행한다.
 
 ## 개발 목표
 

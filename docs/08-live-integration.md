@@ -1,6 +1,6 @@
 # 운영 연결 및 랜딩 SDK 설치
 
-현재 Firestore와 Google 로그인 제공자만 배포됐다. 아래 URL의 API와 SDK 번들은 `landing-tracking` 결제 계정 연결 후 Functions·Hosting 배포가 끝나야 사용 가능하다.
+Firebase 프로젝트 `landing-tracking`의 Google 로그인 제공자, Firestore Rules·인덱스, Functions 3개, 관리자 Hosting과 SDK 번들을 배포했다. 라이브의 비로그인 관리자 API는 401, 미게시 사이트 설정은 404, SDK 번들은 200으로 확인했다. 실제 계정 로그인, 사이트 등록·게시, 랜딩에 설치한 뒤 광고 플랫폼 수신은 아직 확인해야 한다.
 
 ## 관리자와 데이터 흐름
 
@@ -12,7 +12,7 @@
 4. 설정을 게시한다. SDK는 `https://pixel-manager.web.app/tracking-config?siteId=<siteId>`의 게시본만 읽는다. 초안은 공개되지 않는다.
 5. 필요하면 관리자에서 이전 릴리스로 롤백한다. 이전 내용이 새 릴리스로 게시된다.
 
-운영 배포: Google 제공자는 `firebase deploy --only auth --project landing-tracking`으로 활성화했고 `pixel-manager.web.app`의 승인도 확인했다. `npm run typecheck`, `npm test`, `npm run test:api`, `npm run test:stack`, `npm run build` 후 `firebase deploy --only functions,firestore,hosting --project landing-tracking`을 실행한다. Functions 환경 파일에는 `ADMIN_EMAIL`과 `ADMIN_ORIGIN=https://pixel-manager.web.app`를 설정한다. 웹 앱의 공개 Firebase 설정은 `apps/admin/.env.production`에 있다. SDK 번들은 빌드 시 Hosting의 `/sdk/landing-tracking-sdk.iife.js`에 복사된다.
+운영 배포: Google 제공자는 `firebase deploy --only auth --project landing-tracking`으로 활성화했고 `pixel-manager.web.app`의 승인도 확인했다. `npm run typecheck`, `npm test`, `npm run build` 후 Functions를 먼저 배포하고 Firestore·Hosting을 배포했다. 재배포 명령과 복구 절차는 [배포 기록](07-deployment.md)을 따른다. Functions 환경 파일에는 `ADMIN_EMAIL`과 `ADMIN_ORIGIN=https://pixel-manager.web.app`를 설정한다. 웹 앱의 공개 Firebase 설정은 `apps/admin/.env.production`에 있다. SDK 번들은 빌드 시 Hosting의 `/sdk/landing-tracking-sdk.iife.js`에 복사된다.
 
 ## 랜딩에 넣을 코드
 
