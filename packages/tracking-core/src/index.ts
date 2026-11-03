@@ -3,6 +3,7 @@ export type Provider = typeof providerNames[number];
 export type CommonTag = { id: string; provider: Provider; enabled: boolean; trackingId: string; inflowDomain?: string };
 export type ConversionTag = { id: string; provider: Provider; enabled: boolean; event: 'consultation_complete'; sendTo?: string; conversionType?: string; eventName?: string };
 export type DraftConfig = { siteId: string; version: number; common: CommonTag[]; conversions: ConversionTag[] };
+export { diffScriptChanges, type ScriptChange } from './scriptChanges.ts';
 export type PublishedConfig = {
   schemaVersion: 1;
   siteId: string;

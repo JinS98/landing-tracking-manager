@@ -7,6 +7,7 @@ import { auth, demoMode, googleProvider } from './lib/firebase';
 import { liveGateway } from './lib/liveGateway';
 import { initialWorkspace, providerLabels } from './lib/demoData';
 import { searchCompanies } from './lib/companySearch';
+import { historyItems, matchesHistory, type HistoryItem } from './lib/historyView';
 import { diffDraftScripts, editScript, publishDraft, registerSite, rollbackRelease, type ScriptEdit } from './lib/demoWorkspace';
 import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type Site, type TrackingConfig } from './types/tracking';
 
@@ -19,6 +20,8 @@ const menu = [
   { to: '/diagnostics', label: '설치 진단', icon: Activity, end: false },
 ];
 const dateText = (value: string) => new Date(value).toLocaleString('ko-KR');
+const historyActionNames = { draft: '초안 저장', publish: '게시', rollback: '롤백', register: '사이트 등록', registerCompany: '업체 등록' };
+const changeActionNames = { add: '추가', update: '수정', remove: '제거' };
 const emptyWorkspace: DemoWorkspace = { companies: [], sites: [], drafts: [], releases: [], audit: [], importJobs: [] };
 type WorkspaceActions = {
   registerCompany(id: string, name: string): Promise<void>;
@@ -47,7 +50,26 @@ function CompanyRail({ workspace }: { workspace: DemoWorkspace }) {
   </aside>;
 }
 
+function HistoryCard({ item }: { item: HistoryItem }) {
+  const { entry, changes } = item;
+  const version = entry.afterVersion && ['draft', 'publish', 'rollback'].includes(entry.action)
+    ? `${entry.beforeVersion === undefined ? '' : `v${entry.beforeVersion} → `}v${entry.afterVersion}` : '';
+  return <li className="history-card">
+    <div className="history-card-top"><span className={'pill ' + (entry.action === 'publish' ? 'green' : entry.action === 'rollback' ? 'amber' : 'gray')}>{historyActionNames[entry.action]}</span>
+      {version && <span className="history-version">{version}</span>}{entry.actorRef && <span className="history-actor">작업자 {entry.actorRef}</span>}<time dateTime={entry.at}>{dateText(entry.at)}</time></div>
+    <div className="history-identity"><strong>{item.companyName || '업체 정보 없음'}</strong>{item.companyId && <span>ID {item.companyId}</span>}
+      {item.siteId && <><span className="history-divider">/</span><NavLink to={'/sites/' + item.siteId}>{item.siteId}</NavLink></>}{item.domain && <span>{item.domain}</span>}</div>
+    {changes && changes.length ? <ul className="history-changes">{changes.map((change, index) => <li key={`${change.kind}:${change.scriptId}:${index}`}>
+      <span className={'history-change-action ' + change.action}>{changeActionNames[change.action]}</span>
+      <span><b>{providerLabels[change.provider]}</b> {change.kind === 'common' ? '공통 스크립트' : '전환 이벤트'}
+        <small>{change.action === 'update' ? `${change.before} → ${change.after}` : change.after ?? change.before}</small></span>
+    </li>)}</ul> : <p className="history-note">{changes ? '스크립트 값 변경 없음' : entry.action === 'draft' ? '이전 초안 기록에는 스크립트별 변경 내역이 없습니다.' : entry.action === 'publish' || entry.action === 'rollback' ? '비교할 이전 게시 설정이 없습니다.' : entry.summary}</p>}
+  </li>;
+}
+
 function Dashboard({ workspace }: { workspace: DemoWorkspace }) {
+  const [historyQuery, setHistoryQuery] = useState('');
+  const recentHistory = historyItems(workspace).filter(item => matchesHistory(item, historyQuery)).slice(0, 5);
   const activeProviders = new Set(workspace.drafts.flatMap(config => config.common.filter(item => item.enabled).map(item => item.provider))).size;
   const installed = workspace.sites.filter(site => site.sdkStatus === 'installed').length;
   return <>
@@ -59,7 +81,8 @@ function Dashboard({ workspace }: { workspace: DemoWorkspace }) {
       <div className="stat"><small>SDK 확인</small><strong>{installed}/{workspace.sites.length}</strong><span>실제 설치 진단 미연동</span></div>
     </div>
     <div className="panel"><div className="panel-head"><h2>최근 설정 변경 및 게시 이력</h2><NavLink className="text-link" to="/releases">전체 보기 →</NavLink></div>
-      {workspace.audit.length ? <ul className="history-list">{workspace.audit.slice(0, 5).map(entry => <li key={entry.id}><b>{entry.summary}</b><span>{entry.siteId} · {dateText(entry.at)}</span></li>)}</ul> : <p className="empty">아직 변경 이력이 없습니다.</p>}
+      <div className="filter-bar"><div className="toolbar"><Search size={17}/><input aria-label="최근 이력 검색" value={historyQuery} onChange={event => setHistoryQuery(event.target.value)} placeholder="업체명·업체 ID·사이트 ID·도메인 검색"/></div></div>
+      {recentHistory.length ? <ul className="history-cards">{recentHistory.map(item => <HistoryCard key={item.entry.id} item={item}/>)}</ul> : <p className="empty">{historyQuery ? '검색 결과가 없습니다.' : '아직 변경 이력이 없습니다.'}</p>}
     </div>
   </>;
 }
@@ -208,14 +231,15 @@ function SiteDetail({ workspace, actions }: { workspace: DemoWorkspace; actions:
 }
 
 function Releases({ workspace }: { workspace: DemoWorkspace }) {
+  const [query, setQuery] = useState('');
   const [siteFilter, setSiteFilter] = useState('all');
   const [actionFilter, setActionFilter] = useState('all');
-  const entries = workspace.audit.filter(entry => (siteFilter === 'all' || entry.siteId === siteFilter) && (actionFilter === 'all' || entry.action === actionFilter));
-  const actionName = { draft: '초안', publish: '게시', rollback: '롤백', register: '사이트 등록', registerCompany: '업체 등록' };
+  const entries = historyItems(workspace).filter(item => matchesHistory(item, query) &&
+    (siteFilter === 'all' || item.siteId === siteFilter) && (actionFilter === 'all' || item.entry.action === actionFilter));
   return <><div className="page-head"><div><span className="eyebrow">RELEASES</span><h1>변경 및 배포 이력</h1><p>수행한 작업을 사이트별로 확인합니다.</p></div>{demoMode && <span className="pill amber">데모 기록</span>}</div>
     <div className="stats compact-stats"><div className="stat"><small>전체 기록</small><strong>{workspace.audit.length}</strong><span>{demoMode ? '브라우저 메모리' : 'Firestore 감사 기록'}</span></div><div className="stat"><small>게시</small><strong>{workspace.audit.filter(entry => entry.action === 'publish').length}</strong><span>릴리스</span></div><div className="stat"><small>롤백</small><strong>{workspace.audit.filter(entry => entry.action === 'rollback').length}</strong><span>새 버전으로 복원</span></div></div>
-    <div className="panel"><div className="panel-head"><h2>감사 로그</h2><span className="muted">{entries.length}건 표시</span></div><div className="filter-bar"><label>사이트<select aria-label="이력 사이트 필터" value={siteFilter} onChange={event => setSiteFilter(event.target.value)}><option value="all">전체 사이트</option>{workspace.sites.map(site => <option key={site.id} value={site.id}>{site.id}</option>)}</select></label><label>작업<select aria-label="이력 작업 필터" value={actionFilter} onChange={event => setActionFilter(event.target.value)}><option value="all">전체 작업</option>{Object.entries(actionName).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>
-      {entries.length ? <div className="table-wrap"><table><thead><tr><th>시간</th><th>작업</th><th>사이트</th><th>변경 내용</th><th>주체</th><th>버전</th><th></th></tr></thead><tbody>{entries.map(entry => <tr key={entry.id}><td>{dateText(entry.at)}</td><td><span className={'pill ' + (entry.action === 'rollback' ? 'amber' : entry.action === 'publish' ? 'green' : 'gray')}>{actionName[entry.action]}</span></td><td><strong>{entry.siteId}</strong></td><td>{entry.summary}</td><td>{entry.actorRef ?? '데모 기록'}</td><td>{entry.beforeVersion === undefined ? '—' : `${entry.beforeVersion} → ${entry.afterVersion}`}</td><td><NavLink className="text-link" to={'/sites/' + entry.siteId}>보기</NavLink></td></tr>)}</tbody></table></div> : <p className="empty">선택한 조건의 이력이 없습니다.</p>}
+    <div className="panel"><div className="panel-head"><h2>감사 로그</h2><span className="muted">{entries.length}건 표시</span></div><div className="filter-bar"><div className="toolbar"><Search size={17}/><input aria-label="전체 이력 검색" value={query} onChange={event => setQuery(event.target.value)} placeholder="업체명·업체 ID·사이트 ID·도메인 검색"/></div><label>사이트<select aria-label="이력 사이트 필터" value={siteFilter} onChange={event => setSiteFilter(event.target.value)}><option value="all">전체 사이트</option>{workspace.sites.map(site => <option key={site.id} value={site.id}>{site.id}</option>)}</select></label><label>작업<select aria-label="이력 작업 필터" value={actionFilter} onChange={event => setActionFilter(event.target.value)}><option value="all">전체 작업</option>{Object.entries(historyActionNames).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>
+      {entries.length ? <ul className="history-cards">{entries.map(item => <HistoryCard key={item.entry.id} item={item}/>)}</ul> : <p className="empty">선택한 조건의 이력이 없습니다.</p>}
     </div></>;
 }
 function Diagnostics({ workspace }: { workspace: DemoWorkspace }) {

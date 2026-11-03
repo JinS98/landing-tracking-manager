@@ -1,4 +1,4 @@
-import { parseDraftConfig, projectPublishedConfig } from '@ltm/tracking-core';
+import { diffScriptChanges, parseDraftConfig, projectPublishedConfig } from '@ltm/tracking-core';
 import { emptyConfig, type CommonScript, type ConversionScript, type DemoWorkspace, type Provider, type Site, type TrackingConfig, type TrackingRelease } from '../types/tracking.ts';
 
 export type ScriptEdit =
@@ -12,10 +12,11 @@ export function saveDraft(state: DemoWorkspace, config: TrackingConfig, descript
   const current = state.drafts.find(item => item.siteId === config.siteId);
   if (config.version !== (current?.version ?? 0)) throw new Error('초안 버전이 변경되었습니다. 다시 확인하세요.');
   const next = { ...parseDraftConfig(config, config.siteId), version: config.version + 1 };
+  const changes = diffScriptChanges(current ?? emptyConfig(config.siteId), next);
   return {
     ...state,
     drafts: [...state.drafts.filter(item => item.siteId !== config.siteId), next],
-    audit: [{ id: crypto.randomUUID(), siteId: config.siteId, action: 'draft', summary: description ? `초안 v${next.version} · ${description}` : `초안 v${next.version} 수정`, at: stamp(), actorRef: 'demo-operator', beforeVersion: config.version, afterVersion: next.version }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId: config.siteId, action: 'draft', summary: description ? `초안 v${next.version} · ${description}` : `초안 v${next.version} 수정`, changes, at: stamp(), actorRef: 'demo-operator', beforeVersion: config.version, afterVersion: next.version }, ...state.audit],
   };
 }
 
@@ -89,7 +90,7 @@ export function publishDraft(state: DemoWorkspace, siteId: string, expectedDraft
   const release: TrackingRelease = { id: crypto.randomUUID(), siteId, version, config: structuredClone(draft), publicConfig, publishedAt };
   return {
     ...state, releases: [release, ...state.releases],
-    audit: [{ id: crypto.randomUUID(), siteId, action: 'publish', summary: `데모 릴리스 v${version} 게시`, at: release.publishedAt, actorRef: 'demo-operator', beforeVersion: latest?.version ?? 0, afterVersion: version }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId, action: 'publish', summary: `데모 릴리스 v${version} 게시`, changes: diffScriptChanges(latest?.config ?? null, draft), at: release.publishedAt, actorRef: 'demo-operator', beforeVersion: latest?.version ?? 0, afterVersion: version }, ...state.audit],
   };
 }
 
@@ -110,7 +111,7 @@ export function rollbackRelease(state: DemoWorkspace, siteId: string, targetVers
   return {
     ...state, releases: [release, ...state.releases],
     drafts: [...state.drafts.filter(item => item.siteId !== siteId), { ...structuredClone(target.config), version: (state.drafts.find(item => item.siteId === siteId)?.version ?? 0) + 1 }],
-    audit: [{ id: crypto.randomUUID(), siteId, action: 'rollback', summary: `v${targetVersion} 기준으로 v${version} 롤백`, at: release.publishedAt, actorRef: 'demo-operator', beforeVersion: latest.version, afterVersion: version }, ...state.audit],
+    audit: [{ id: crypto.randomUUID(), siteId, action: 'rollback', summary: `v${targetVersion} 기준으로 v${version} 롤백`, changes: diffScriptChanges(latest.config, target.config), at: release.publishedAt, actorRef: 'demo-operator', beforeVersion: latest.version, afterVersion: version }, ...state.audit],
   };
 }
 

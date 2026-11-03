@@ -50,7 +50,7 @@ test('admin browser editor adds, edits, toggles, removes and publishes demo scri
     await page.getByRole('button', { name: '제거' }).click();
     assert.equal(await page.locator('.script-row').count(), 0);
     await page.getByRole('link', { name: '배포 이력' }).click();
-    assert.match(await page.locator('tbody').innerText(), /전환 이벤트 제거/);
+    assert.match(await page.locator('.history-cards').innerText(), /제거\s+Google Ads 전환 이벤트/);
     await page.close();
   } finally {
     await browser?.close();
@@ -107,10 +107,20 @@ test('redesigned admin shows demo diagnostics and filters actor/version audit hi
     await page.getByRole('button', { name: '데모 게시' }).click();
     await page.getByRole('link', { name: '배포 이력' }).click();
     await page.getByLabel('이력 사이트 필터').selectOption('coffee-main');
-    assert.match(await page.locator('tbody').innerText(), /demo-operator/);
-    assert.match(await page.locator('tbody').innerText(), /0 → 1/);
+    assert.match(await page.locator('.history-cards').innerText(), /demo-operator/);
+    assert.match(await page.locator('.history-cards').innerText(), /v0 → v1/);
     await page.getByLabel('이력 사이트 필터').selectOption('coffee-event');
     assert.match(await page.locator('.empty').innerText(), /이력이 없습니다/);
+    await page.getByLabel('이력 사이트 필터').selectOption('all');
+    await page.getByLabel('전체 이력 검색').fill('샘플 커피 coffee-main');
+    assert.match(await page.locator('.history-cards').innerText(), /Google Ads 공통 스크립트/);
+    await page.getByLabel('전체 이력 검색').fill('가상 스튜디오');
+    assert.match(await page.locator('.empty').innerText(), /이력이 없습니다/);
+    await page.getByRole('link', { name: '대시보드' }).click();
+    await page.getByLabel('최근 이력 검색').fill('sample-coffee');
+    assert.match(await page.locator('.history-cards').innerText(), /샘플 커피/);
+    await page.getByLabel('최근 이력 검색').fill('unknown-site');
+    assert.match(await page.locator('.empty').innerText(), /검색 결과가 없습니다/);
     await page.getByRole('link', { name: '설치 진단' }).click();
     assert.match(await page.locator('.notice').innerText(), /가상 값/);
     await page.getByLabel('진단 상태 필터').selectOption('unknown');

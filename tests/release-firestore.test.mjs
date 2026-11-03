@@ -65,6 +65,11 @@ test('draft, publish and rollback are atomic, versioned and visible through publ
   const history = await listSiteAudit(db, siteId, 3, request('GET'), deps);
   assert.deepEqual(history.map(entry => [entry.action, entry.beforeVersion, entry.afterVersion]),
     [['rollback', 2, 3], ['publish', 1, 2], ['draft', 1, 2]]);
+  assert.deepEqual(history.map(entry => entry.changes.map(change => [change.kind, change.action, change.before, change.after])), [
+    [['conversion', 'update', 'AW-123456789/SECOND · 활성', 'AW-123456789/FIRST · 활성']],
+    [['conversion', 'update', 'AW-123456789/FIRST · 활성', 'AW-123456789/SECOND · 활성']],
+    [['conversion', 'update', 'AW-123456789/FIRST · 활성', 'AW-123456789/SECOND · 활성']],
+  ]);
   assert.ok(history.every(entry => entry.actorRef === 'editor-demo' && entry.createdAt.endsWith('Z')));
   const allHistory = await listSiteAudit(db, siteId, 10, request('GET'), deps);
   assert.equal(allHistory.at(-1).action, 'register');

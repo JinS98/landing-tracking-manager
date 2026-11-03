@@ -1,5 +1,5 @@
 import { FieldValue, Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
-import { isValidSiteId, parseDraftConfig, projectPublishedConfig, type DraftConfig, type PublishedConfig } from '@ltm/tracking-core';
+import { diffScriptChanges, isValidSiteId, parseDraftConfig, projectPublishedConfig, type DraftConfig, type PublishedConfig } from '@ltm/tracking-core';
 import { requireAdminAccess, type AdminAccessDependencies, type GatewayRequest } from './access.ts';
 
 export class ReleaseWorkflowError extends Error {
@@ -67,10 +67,11 @@ export async function saveAdminDraft(
     const { configRef, state } = await readConfig(transaction, db, siteId);
     if (state.draftVersion !== expectedVersion) throw new ReleaseWorkflowError(409, 'Draft version changed');
     const next = { ...input, version: expectedVersion + 1 };
+    const changes = diffScriptChanges(state.draft, next);
     const now = FieldValue.serverTimestamp();
     transaction.update(configRef, { draft: next, draftVersion: next.version, updatedAt: now, updatedBy: operator.subject });
     transaction.create(auditRef, { siteId, action: 'draft', actorRef: operator.subject,
-      summary: `Draft v${next.version} saved`, beforeVersion: expectedVersion, afterVersion: next.version, createdAt: now });
+      summary: `Draft v${next.version} saved`, changes, beforeVersion: expectedVersion, afterVersion: next.version, createdAt: now });
     return next;
   });
 }
@@ -91,22 +92,25 @@ export async function publishAdminDraft(
     if (state.publishedVersion === 0 && state.draft.common.length === 0) {
       throw new ReleaseWorkflowError(409, 'Add a common script before the first publish');
     }
+    let previous: DraftConfig | null = null;
     if (state.publishedVersion > 0) {
       const latestRef = db.collection('trackingReleases').doc(`${siteId}__v${state.publishedVersion}`);
       const latest = await transaction.get(latestRef);
       if (!latest.exists) throw new ReleaseWorkflowError(409, 'Published release is missing');
-      if (sameScripts(state.draft, releaseDraft(latest.data(), siteId, state.publishedVersion))) {
+      previous = releaseDraft(latest.data(), siteId, state.publishedVersion);
+      if (sameScripts(state.draft, previous)) {
         throw new ReleaseWorkflowError(409, 'Draft matches the published release');
       }
     }
     const version = state.publishedVersion + 1;
+    const changes = diffScriptChanges(previous, state.draft);
     const releaseRef = db.collection('trackingReleases').doc(`${siteId}__v${version}`);
     const now = FieldValue.serverTimestamp();
     transaction.create(releaseRef, { siteId, version, config: state.draft, sourceDraftVersion: state.draftVersion,
       publishedAt, actorRef: operator.subject });
     transaction.update(configRef, { publishedVersion: version, updatedAt: now, updatedBy: operator.subject });
     transaction.create(auditRef, { siteId, action: 'publish', actorRef: operator.subject,
-      summary: `Release v${version} published`, beforeVersion: state.publishedVersion, afterVersion: version, createdAt: now });
+      summary: `Release v${version} published`, changes, beforeVersion: state.publishedVersion, afterVersion: version, createdAt: now });
     return projectPublishedConfig(state.draft, siteId, version, publishedAt.toDate().toISOString());
   });
 }
@@ -135,6 +139,7 @@ export async function rollbackAdminRelease(
     const restored = releaseDraft(target.data(), siteId, targetVersion);
     if (sameScripts(previous, restored)) throw new ReleaseWorkflowError(409, 'Target matches the published release');
     const version = state.publishedVersion + 1;
+    const changes = diffScriptChanges(previous, restored);
     const draft = { ...restored, version: state.draftVersion + 1 };
     const releaseRef = db.collection('trackingReleases').doc(`${siteId}__v${version}`);
     const now = FieldValue.serverTimestamp();
@@ -144,7 +149,7 @@ export async function rollbackAdminRelease(
       updatedAt: now, updatedBy: operator.subject });
     transaction.create(auditRef, { siteId, action: 'rollback', actorRef: operator.subject,
       summary: `Release v${targetVersion} restored as v${version}`, beforeVersion: state.publishedVersion,
-      afterVersion: version, createdAt: now });
+      afterVersion: version, changes, createdAt: now });
     return projectPublishedConfig(draft, siteId, version, publishedAt.toDate().toISOString());
   });
 }

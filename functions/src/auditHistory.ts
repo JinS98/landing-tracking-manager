@@ -1,5 +1,5 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
-import { isValidSiteId } from '@ltm/tracking-core';
+import { isValidSiteId, type ScriptChange } from '@ltm/tracking-core';
 import { requireAdminAccess, type AdminAccessDependencies, type GatewayRequest } from './access.ts';
 
 export type AuditRecord = {
@@ -10,6 +10,7 @@ export type AuditRecord = {
   beforeVersion: number | null;
   afterVersion: number;
   summary: string;
+  changes?: ScriptChange[];
   createdAt: string;
 };
 
@@ -34,6 +35,7 @@ export async function listSiteAudit(
     return { id: doc.id, siteId, action: value.action as AuditRecord['action'],
       actorRef: value.actorRef, beforeVersion: value.beforeVersion,
       afterVersion: value.afterVersion, summary: value.summary,
+      ...(Array.isArray(value.changes) ? { changes: value.changes as ScriptChange[] } : {}),
       createdAt: value.createdAt.toDate().toISOString() };
   });
 }

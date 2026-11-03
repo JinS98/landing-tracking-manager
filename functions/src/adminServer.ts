@@ -80,7 +80,8 @@ async function readWorkspace(db: Firestore) {
     }).sort((a, b) => a.siteId === b.siteId ? b.version - a.version : b.publishedAt.localeCompare(a.publishedAt)),
     audit: audits.docs.map(doc => ({ id: doc.id, siteId: doc.get('siteId') ?? '', companyId: doc.get('companyId'),
       action: doc.get('action'), summary: doc.get('summary'), at: iso(doc.get('createdAt')),
-      actorRef: doc.get('actorRef'), beforeVersion: doc.get('beforeVersion'), afterVersion: doc.get('afterVersion') }))
+      actorRef: doc.get('actorRef'), beforeVersion: doc.get('beforeVersion'), afterVersion: doc.get('afterVersion'),
+      changes: doc.get('changes') }))
       .sort((a, b) => b.at.localeCompare(a.at)),
     importJobs: imports.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: iso(doc.get('createdAt')) }))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
