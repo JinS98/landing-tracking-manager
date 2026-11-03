@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { Activity, Building2, ChevronRight, CircleHelp, Code2, FileSpreadsheet, History, LayoutDashboard, Plus, Search, ShieldCheck } from 'lucide-react';
+import { Activity, Building2, ChevronRight, CircleHelp, Code2, FileSpreadsheet, History, LayoutDashboard, Plus, Search, ShieldCheck, X } from 'lucide-react';
 import ImportPage from './ImportPage';
 import { auth, demoMode, googleProvider } from './lib/firebase';
 import { liveGateway } from './lib/liveGateway';
@@ -94,6 +94,9 @@ function SiteTable({ sites, workspace }: { sites: Site[]; workspace: DemoWorkspa
 
 function Sites({ workspace, actions }: { workspace: DemoWorkspace; actions: WorkspaceActions }) {
   const navigate = useNavigate();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [modal, setModal] = useState<'company' | 'site' | null>(null);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [companyId, setCompanyId] = useState(workspace.companies[0]?.id ?? '');
   const [siteId, setSiteId] = useState('');
@@ -103,36 +106,73 @@ function Sites({ workspace, actions }: { workspace: DemoWorkspace; actions: Work
   const [error, setError] = useState('');
   const visible = searchCompanies(workspace, search);
   const selectedCompanyId = companyId || workspace.companies[0]?.id || '';
+  useEffect(() => {
+    if (modal && dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal();
+  }, [modal]);
+  function openModal(kind: 'company' | 'site') {
+    setError('');
+    if (kind === 'company') { setNewCompanyId(''); setNewCompanyName(''); }
+    else { setSiteId(''); setDomain(''); }
+    setModal(kind);
+  }
+  function closeModal() {
+    if (saving) return;
+    dialogRef.current?.close();
+    setModal(null);
+    setError('');
+  }
   async function addSite() {
+    if (saving) return;
+    setSaving(true);
     try {
       await actions.registerSite(siteId, selectedCompanyId, domain);
-      setSiteId(''); setDomain(''); setError('');
+      dialogRef.current?.close(); setModal(null); setSiteId(''); setDomain(''); setError('');
       navigate('/companies/' + selectedCompanyId);
     } catch (reason) { setError((reason as Error).message); }
+    finally { setSaving(false); }
   }
   async function addCompany() {
+    if (saving) return;
+    setSaving(true);
     try {
       await actions.registerCompany(newCompanyId, newCompanyName);
       setCompanyId(newCompanyId.trim()); setNewCompanyId(''); setNewCompanyName(''); setError('');
+      dialogRef.current?.close(); setModal(null);
     } catch (reason) { setError((reason as Error).message); }
+    finally { setSaving(false); }
   }
   return <>
-    <div className="page-head"><div><span className="eyebrow">ADVERTISERS</span><h1>업체 관리</h1><p>업체를 검색하고 업체별 랜딩페이지를 선택합니다.</p></div></div>
+    <div className="page-head"><div><span className="eyebrow">ADVERTISERS</span><h1>업체 관리</h1><p>업체를 검색하고 업체별 랜딩페이지를 선택합니다.</p></div>
+      <div className="page-actions"><button type="button" className="btn secondary" onClick={() => openModal('company')}><Plus size={16}/> 업체 추가</button>
+        <button type="button" className="btn primary" onClick={() => openModal('site')} disabled={!workspace.companies.length} title={!workspace.companies.length ? '먼저 업체를 추가하세요.' : undefined}><Plus size={16}/> 사이트 추가</button></div></div>
     <div className="panel"><div className="toolbar"><Search size={17}/><input aria-label="업체 또는 사이트 검색" value={search} onChange={event => setSearch(event.target.value)} placeholder="업체명, siteId, 도메인 검색"/></div>
       {visible.map(({ company, sites }) => <section className="company-section" key={company.id}><div className="panel-head"><h2><NavLink className="company-link" to={'/companies/' + company.id}>{company.name}</NavLink> <small>· {workspace.sites.filter(site => site.companyId === company.id).length}개 사이트</small></h2><span className={'pill ' + (company.status === 'active' ? 'green' : 'amber')}>{company.status === 'active' ? '활성' : '등록 대기'}</span></div>
         <SiteTable sites={sites} workspace={workspace}/>
       </section>)}
       {!visible.length && <p className="empty">검색 결과가 없습니다.</p>}
     </div>
-    <div className="panel section-gap"><div className="panel-head"><h2>업체 등록</h2></div><div className="editor"><div className="form-grid">
-      <label>업체 ID<input value={newCompanyId} onChange={event => setNewCompanyId(event.target.value)} placeholder="sample-company"/></label>
-      <label>업체명<input value={newCompanyName} onChange={event => setNewCompanyName(event.target.value)} placeholder="샘플 업체"/></label>
-    </div><div className="editor-footer"><small>한 업체에 여러 랜딩 사이트를 등록할 수 있습니다.</small><button className="btn primary" onClick={addCompany}>업체 등록</button></div></div></div>
-    <div className="panel section-gap"><div className="panel-head"><h2>랜딩 사이트 등록</h2></div><div className="editor"><p className="muted">사이트를 등록한 뒤 매체 설정을 저장하고 게시하세요.</p><div className="form-grid">
-      <label>업체<select value={selectedCompanyId} onChange={event => setCompanyId(event.target.value)}>{workspace.companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>
-      <label>siteId<input value={siteId} onChange={event => setSiteId(event.target.value)} placeholder="new-landing"/></label>
-      <label>도메인<input value={domain} onChange={event => setDomain(event.target.value)} placeholder="landing.example"/></label>
-    </div>{error && <p className="error">{error}</p>}<div className="editor-footer"><small>사이트 ID는 등록 후 변경할 수 없습니다.</small><button className="btn primary" onClick={addSite} disabled={!workspace.companies.length}><Plus size={16}/> 사이트 등록</button></div></div></div>
+    {modal && <dialog ref={dialogRef} className="registration-dialog" aria-labelledby="registration-title"
+      onCancel={event => { if (saving) event.preventDefault(); else { setModal(null); setError(''); } }}
+      onClick={event => { const rect = event.currentTarget.getBoundingClientRect();
+        if (event.target === event.currentTarget && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) closeModal(); }}>
+      <div className="registration-head"><div><h2 id="registration-title">{modal === 'company' ? '업체 추가' : '사이트 추가'}</h2>
+        <p>{modal === 'company' ? '업체를 등록한 뒤 랜딩 사이트를 연결할 수 있습니다.' : '업체에 새 랜딩 사이트를 등록합니다.'}</p></div>
+        <button type="button" className="registration-close" aria-label="닫기" onClick={closeModal} disabled={saving}><X size={18}/></button></div>
+      <form className="registration-form" onSubmit={event => { event.preventDefault(); void (modal === 'company' ? addCompany() : addSite()); }}>
+        <div className="form-grid registration-fields">{modal === 'company' ? <>
+          <label>업체 ID<input autoFocus required value={newCompanyId} onChange={event => setNewCompanyId(event.target.value)} placeholder="sample-company"/></label>
+          <label>업체명<input required value={newCompanyName} onChange={event => setNewCompanyName(event.target.value)} placeholder="샘플 업체"/></label>
+        </> : <>
+          <label>업체<select autoFocus required value={selectedCompanyId} onChange={event => setCompanyId(event.target.value)}>{workspace.companies.map(company => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>
+          <label>siteId<input required value={siteId} onChange={event => setSiteId(event.target.value)} placeholder="new-landing"/></label>
+          <label>도메인<input required value={domain} onChange={event => setDomain(event.target.value)} placeholder="landing.example"/></label>
+        </>}</div>
+        <p className="registration-hint">{modal === 'company' ? '한 업체에 여러 랜딩 사이트를 등록할 수 있습니다.' : '사이트 ID는 등록 후 변경할 수 없습니다.'}</p>
+        {error && <p className="error" role="alert">{error}</p>}
+        <div className="registration-footer"><button type="button" className="btn secondary" onClick={closeModal} disabled={saving}>취소</button>
+          <button type="submit" className="btn primary" disabled={saving}>{saving ? '등록 중…' : modal === 'company' ? '업체 등록' : '사이트 등록'}</button></div>
+      </form>
+    </dialog>}
   </>;
 }
 

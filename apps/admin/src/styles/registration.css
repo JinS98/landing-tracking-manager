@@ -1,0 +1,14 @@
+.page-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.registration-dialog{width:min(520px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;border:1px solid #dfe4eb;border-radius:12px;background:#fff;color:#182238;box-shadow:0 24px 70px rgb(22 34 55 / 22%);overflow-y:auto}
+.registration-dialog::backdrop{background:rgb(20 30 45 / 46%)}
+.registration-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:21px 24px 18px;border-bottom:1px solid #e9ecf0}
+.registration-head h2{margin:0;font-size:18px;color:#17243a}
+.registration-head p{margin:8px 0 0;color:#778394;font-size:12px;line-height:1.5}
+.registration-close{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;border-radius:6px;background:transparent;color:#7b8796}
+.registration-close:hover:not(:disabled){background:#f5f6f8;color:#263449}
+.registration-form{padding:22px 24px 24px}
+.registration-fields{grid-template-columns:1fr;gap:17px}
+.registration-hint{margin:17px 0 0;color:#8691a1;font-size:11px}
+.registration-form .error{margin:14px 0 0}
+.registration-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:23px;padding-top:17px;border-top:1px solid #e9ecf0}
+@media(max-width:720px){.page-actions{width:100%}.page-actions .btn{flex:1}.registration-head{padding:18px 19px}.registration-form{padding:19px}.registration-footer .btn{flex:1}}

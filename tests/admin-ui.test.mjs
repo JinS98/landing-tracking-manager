@@ -138,6 +138,11 @@ test('redesigned admin shows demo diagnostics and filters actor/version audit hi
     assert.equal(await page.locator('tbody tr').count(), 1);
     assert.match(await page.locator('tbody').innerText(), /수집된 신호 없음/);
     await page.goto(`http://127.0.0.1:${address.port}/sites`);
+    await page.locator('.content').evaluate(element => {
+      const spacer = document.createElement('div');
+      spacer.style.height = '1200px';
+      element.appendChild(spacer);
+    });
     const beforeScroll = await page.evaluate(() => ({ sidebar: document.querySelector('.sidebar').getBoundingClientRect().top,
       rail: document.querySelector('.company-rail').getBoundingClientRect().top,
       header: document.querySelector('.topbar').getBoundingClientRect().top }));
@@ -150,6 +155,42 @@ test('redesigned admin shows demo diagnostics and filters actor/version audit hi
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.locator('.company-rail').isVisible(), false);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    await page.close();
+  } finally { await browser?.close(); await server.close(); }
+});
+
+test('company and site registration use accessible modal forms', async () => {
+  const server = await createServer({ root: resolve('apps/admin'), configFile: resolve('apps/admin/vite.config.ts'),
+    server: { host: '127.0.0.1', port: 0 } });
+  let browser;
+  try {
+    await server.listen();
+    const address = server.httpServer?.address();
+    if (!address || typeof address === 'string') throw new Error('Vite did not provide a local port');
+    browser = await chromium.launch({ channel: 'msedge', headless: true });
+    const page = await browser.newPage();
+    await page.goto(`http://127.0.0.1:${address.port}/sites`);
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.equal(await page.getByLabel('업체 ID').count(), 0);
+    await page.getByRole('button', { name: '업체 추가' }).click();
+    assert.equal(await page.getByRole('dialog', { name: '업체 추가' }).isVisible(), true);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    await page.getByRole('button', { name: '업체 추가' }).click();
+    await page.getByLabel('업체 ID').fill('new-demo-company');
+    await page.getByLabel('업체명').fill('새 테스트 업체');
+    await page.getByRole('dialog').getByRole('button', { name: '업체 등록' }).click();
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.match(await page.locator('.company-section').last().innerText(), /새 테스트 업체/);
+    await page.getByRole('button', { name: '사이트 추가' }).click();
+    const dialog = page.getByRole('dialog', { name: '사이트 추가' });
+    await dialog.locator('select').selectOption('new-demo-company');
+    await dialog.getByLabel('siteId').fill('new-demo-site');
+    await dialog.getByLabel('도메인').fill('new-demo.example');
+    await dialog.getByRole('button', { name: '사이트 등록' }).click();
+    await page.waitForURL('**/companies/new-demo-company');
+    assert.match(await page.locator('table').innerText(), /new-demo-site/);
+    assert.equal(await page.getByRole('dialog').count(), 0);
     await page.close();
   } finally { await browser?.close(); await server.close(); }
 });
