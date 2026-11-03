@@ -188,7 +188,8 @@ function SiteDetail({ workspace, actions }: { workspace: DemoWorkspace; actions:
   const latest = releases[0];
   const changes = diffDraftScripts(config, latest?.config);
   const changed = !latest || changes.length > 0;
-  const canPublish = workspace.drafts.some(item => item.siteId === siteId) && changed;
+  const canPublish = workspace.drafts.some(item => item.siteId === siteId) && changed &&
+    (Boolean(latest) || config.common.length > 0);
   const [error, setError] = useState('');
   if (!site) return <div className="panel empty">존재하지 않는 사이트입니다.</div>;
   async function publish() { try { await actions.publish(siteId, config.version); setError(''); } catch (reason) { setError((reason as Error).message); } }

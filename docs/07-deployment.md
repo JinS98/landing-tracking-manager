@@ -13,6 +13,8 @@
 
 같은 날 로그인 버튼에서 `auth/internal-error`가 발생했다. 새 Edge 세션에서 `apis.google.com` 요청이 CSP에 차단되는 것을 재현했다. 앱의 `authDomain`을 `pixel-manager.web.app`으로 맞추고 OAuth 콜백 `/__/auth/handler`를 등록한 뒤 CSP의 `script-src`에 `https://apis.google.com`, `frame-src`에 `'self'`를 적용했다. 라이브 회귀 테스트에서 로그인 팝업이 Google 계정 선택 화면까지 이동하고 오류·차단 요청이 없음을 확인했다. 실제 계정 선택 후 대시보드와 관리자 API 호출은 별도 확인이 필요하다.
 
+사용자는 실제 계정 로그인 후 대시보드가 열린 것을 확인했다. Cloud Run 요청 로그에는 인증된 `GET 200`과 업체·사이트 등록 `POST 201`이 기록됐고, Firestore에서도 업체·사이트와 등록 감사 기록을 확인했다. `test` 사이트의 첫 게시 v1은 공개 API에서 200과 허용 도메인 CORS·ETag를 반환했으나, 초안 v0의 빈 `common`·`conversions`가 게시됐다. 첫 게시에 공통 스크립트가 없으면 UI와 서버 모두 거부하도록 수정해 배포했다. 매체가 있는 게시본 및 롤백의 라이브 검증은 별도 테스트 사이트에서 진행해야 한다.
+
 ## 변경 배포
 
 1. `npm ci`, `npm run typecheck`, `npm test`, `npm run test:api`, `npm run test:stack`, `npm run build`로 변경 범위를 검증한다.

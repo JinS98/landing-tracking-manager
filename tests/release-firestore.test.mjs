@@ -37,6 +37,7 @@ test('draft, publish and rollback are atomic, versioned and visible through publ
   const siteId = 'release-demo';
   await register(siteId);
   const configRef = db.collection('trackingConfigs').doc(siteId);
+  await assert.rejects(publishAdminDraft(db, siteId, 0, request('POST'), deps), conflict(409));
   const firstDraft = await saveAdminDraft(db, siteId, draft(siteId, 0, 'FIRST'), 0, request('PUT'), deps);
   assert.equal(firstDraft.version, 1);
   const first = await publishAdminDraft(db, siteId, 1, request('POST'), deps);

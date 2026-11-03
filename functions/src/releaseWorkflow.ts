@@ -88,6 +88,9 @@ export async function publishAdminDraft(
   return db.runTransaction(async transaction => {
     const { configRef, state } = await readConfig(transaction, db, siteId);
     if (state.draftVersion !== expectedDraftVersion) throw new ReleaseWorkflowError(409, 'Draft version changed');
+    if (state.publishedVersion === 0 && state.draft.common.length === 0) {
+      throw new ReleaseWorkflowError(409, 'Add a common script before the first publish');
+    }
     if (state.publishedVersion > 0) {
       const latestRef = db.collection('trackingReleases').doc(`${siteId}__v${state.publishedVersion}`);
       const latest = await transaction.get(latestRef);

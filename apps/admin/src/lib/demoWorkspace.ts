@@ -81,6 +81,7 @@ export function publishDraft(state: DemoWorkspace, siteId: string, expectedDraft
   if (!draft) throw new Error('게시할 초안이 없습니다.');
   if (draft.version !== expectedDraftVersion) throw new Error('초안 버전이 변경되었습니다. 다시 확인하세요.');
   const latest = state.releases.find(item => item.siteId === siteId);
+  if (!latest && draft.common.length === 0) throw new Error('첫 게시에는 공통 스크립트를 추가하세요.');
   if (latest && sameScripts(draft, latest.config)) throw new Error('게시본과 같은 내용입니다. 변경 후 게시하세요.');
   const version = Math.max(0, ...state.releases.filter(item => item.siteId === siteId).map(item => item.version)) + 1;
   const publishedAt = stamp();
