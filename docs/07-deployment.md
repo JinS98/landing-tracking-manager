@@ -11,6 +11,8 @@
 
 2026-11-03 라이브 점검: `/` 200, 비로그인 `/api/workspace` 401, 미게시 `siteId`의 `/tracking-config` 404, `/sdk/landing-tracking-sdk.iife.js` 200. Edge에서 Google 로그인 버튼이 보이고 JavaScript 오류가 없었다. 실제 계정으로 로그인한 관리자 CRUD·게시 및 실사이트 SDK 매체 수신은 검증하지 않았다. 첫 Functions 배포 후 Artifact Registry 이미지의 7일 자동 정리 정책을 설정했다.
 
+같은 날 로그인 버튼에서 `auth/internal-error`가 발생했다. 새 Edge 세션에서 `apis.google.com` 요청이 CSP에 차단되는 것을 재현했다. 앱의 `authDomain`을 `pixel-manager.web.app`으로 맞추고 OAuth 콜백 `/__/auth/handler`를 등록한 뒤 CSP의 `script-src`에 `https://apis.google.com`, `frame-src`에 `'self'`를 적용했다. 라이브 회귀 테스트에서 로그인 팝업이 Google 계정 선택 화면까지 이동하고 오류·차단 요청이 없음을 확인했다. 실제 계정 선택 후 대시보드와 관리자 API 호출은 별도 확인이 필요하다.
+
 ## 변경 배포
 
 1. `npm ci`, `npm run typecheck`, `npm test`, `npm run test:api`, `npm run test:stack`, `npm run build`로 변경 범위를 검증한다.

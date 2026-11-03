@@ -10,6 +10,9 @@ test('hosting serves the admin shell, SDK and deep routes without exposing backe
   if (origin.startsWith('https://')) {
     assert.match(root.headers.get('cache-control') ?? '', /no-cache/);
     assert.match(root.headers.get('content-security-policy') ?? '', /default-src 'self'/);
+    assert.match(root.headers.get('content-security-policy') ?? '', /frame-src 'self'/);
+    assert.equal((await fetch(origin + '/__/auth/iframe')).status, 200);
+    assert.equal((await fetch(origin + '/__/firebase/init.json')).status, 200);
   }
   const html = await root.text();
   assert.match(html, /Landing Tracking Manager/);
@@ -21,6 +24,7 @@ test('hosting serves the admin shell, SDK and deep routes without exposing backe
   const script = await fetch(origin + scriptPath);
   assert.equal(script.status, 200);
   assert.match(script.headers.get('content-type') ?? '', /javascript/);
+  if (origin.startsWith('https://')) assert.match(await script.text(), /pixel-manager\.web\.app/);
   const sdk = await fetch(origin + '/sdk/landing-tracking-sdk.iife.js');
   assert.equal(sdk.status, 200);
   assert.match(sdk.headers.get('content-type') ?? '', /javascript/);
@@ -38,6 +42,19 @@ test('hosted admin requires sign-in before showing dashboard or site data', asyn
     assert.match(await page.locator('h1').innerText(), /Landing Tracking Manager/);
     await page.goto(origin + '/sites/coffee-main');
     assert.match(await page.locator('h1').innerText(), /Landing Tracking Manager/);
+    if (origin.startsWith('https://')) {
+      const blocked = [];
+      page.on('requestfailed', request => {
+        if (request.failure()?.errorText === 'csp') blocked.push(new URL(request.url()).host);
+      });
+      const popupEvent = page.waitForEvent('popup');
+      await page.getByRole('button', { name: /Google/ }).click();
+      const popup = await popupEvent;
+      await popup.waitForURL(url => url.hostname === 'accounts.google.com');
+      assert.deepEqual(await page.getByRole('alert').allInnerTexts(), []);
+      assert.deepEqual(blocked, []);
+      await popup.close();
+    }
     assert.deepEqual(errors, []);
     await page.close();
   } finally { await browser.close(); }

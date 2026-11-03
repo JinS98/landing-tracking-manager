@@ -2,7 +2,7 @@
   "auth": { "providers": { "googleSignIn": {
     "oAuthBrandDisplayName": "Landing Tracking Manager",
     "supportEmail": "hangun9087@gmail.com",
-    "authorizedRedirectUris": ["https://pixel-manager.web.app"]
+    "authorizedRedirectUris": ["https://pixel-manager.web.app", "https://pixel-manager.web.app/__/auth/handler"]
   } } },
   "functions": { "source": "functions", "runtime": "nodejs22", "predeploy": ["npm --prefix functions run build"] },
   "firestore": {
@@ -22,7 +22,7 @@
     "headers": [
       { "source": "**", "headers": [
         { "key": "Cache-Control", "value": "no-cache" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src https://landing-tracking-d92d0.firebaseapp.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' https://apis.google.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "X-Content-Type-Options", "value": "nosniff" }
       ] },

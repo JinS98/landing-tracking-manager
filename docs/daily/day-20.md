@@ -8,6 +8,7 @@
 - Firestore Rules·인덱스, 운영 관리자 화면, SDK 번들을 Hosting 사이트 `pixel-manager`에 배포했다. 주소는 https://pixel-manager.web.app 이다.
 - 라이브 HTTP에서 `/` 200, 비로그인 `/api/workspace` 401, 미게시 설정 `/tracking-config` 404, SDK 번들 200을 확인했다. Edge에서 Google 로그인 화면과 JavaScript 오류 없음도 확인했다.
 - 실제 관리자 계정으로 로그인한 CRUD·게시·롤백과 랜딩 사이트의 SDK 삽입·광고 매체 수신은 검증하지 않았다. 랜딩 소스는 사용자가 추후 제공하며 SDK 설치는 사용자가 진행한다.
+- Google 로그인 버튼의 `auth/internal-error`를 새 브라우저에서 재현해 CSP가 `apis.google.com`을 차단하는 것을 확인했다. 앱 도메인에 맞는 `authDomain`·OAuth 콜백과 최소 CSP 허용을 배포했다. 새 Edge 세션에서 Google 계정 선택 화면까지 열리고 브라우저 오류가 없는 것을 확인했다. 실제 계정 로그인 후 API 흐름은 아직 확인하지 않았다.
 
 ## 개발 목표
 
