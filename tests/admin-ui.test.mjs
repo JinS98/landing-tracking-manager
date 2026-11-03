@@ -126,6 +126,16 @@ test('redesigned admin shows demo diagnostics and filters actor/version audit hi
     await page.getByLabel('진단 상태 필터').selectOption('unknown');
     assert.equal(await page.locator('tbody tr').count(), 1);
     assert.match(await page.locator('tbody').innerText(), /수집된 신호 없음/);
+    await page.goto(`http://127.0.0.1:${address.port}/sites`);
+    const beforeScroll = await page.evaluate(() => ({ sidebar: document.querySelector('.sidebar').getBoundingClientRect().top,
+      rail: document.querySelector('.company-rail').getBoundingClientRect().top,
+      header: document.querySelector('.topbar').getBoundingClientRect().top }));
+    await page.locator('.content').evaluate(element => { element.scrollTop = element.scrollHeight; });
+    assert.equal(await page.locator('.content').evaluate(element => element.scrollTop > 0), true);
+    assert.deepEqual(await page.evaluate(() => ({ sidebar: document.querySelector('.sidebar').getBoundingClientRect().top,
+      rail: document.querySelector('.company-rail').getBoundingClientRect().top,
+      header: document.querySelector('.topbar').getBoundingClientRect().top })), beforeScroll);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight), true);
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.locator('.company-rail').isVisible(), false);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
