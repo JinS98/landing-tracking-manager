@@ -119,6 +119,17 @@ test('redesigned admin shows demo diagnostics and filters actor/version audit hi
     await page.getByRole('link', { name: '대시보드' }).click();
     await page.getByLabel('최근 이력 검색').fill('sample-coffee');
     assert.match(await page.locator('.history-cards').innerText(), /샘플 커피/);
+    assert.equal(await page.getByLabel('최근 이력 검색').evaluate(element => getComputedStyle(element).outlineStyle), 'none');
+    assert.equal(await page.locator('.filter-bar .toolbar').evaluate(element => getComputedStyle(element).borderTopColor), 'rgb(232, 135, 49)');
+    assert.equal(await page.locator('.filter-bar .toolbar').evaluate(element => getComputedStyle(element).boxShadow), 'none');
+    await page.getByLabel('빠른 업체 검색').focus();
+    assert.deepEqual(await page.getByLabel('빠른 업체 검색').evaluate(element => ({
+      outline: getComputedStyle(element).outlineStyle, border: getComputedStyle(element).borderTopColor,
+    })), { outline: 'none', border: 'rgb(232, 135, 49)' });
+    assert.equal(await page.locator('.filter-bar').evaluate(element => {
+      const heading = element.previousElementSibling;
+      return Boolean(heading && element.querySelector('.toolbar').getBoundingClientRect().top - heading.getBoundingClientRect().bottom >= 12);
+    }), true);
     await page.getByLabel('최근 이력 검색').fill('unknown-site');
     assert.match(await page.locator('.empty').innerText(), /검색 결과가 없습니다/);
     await page.getByRole('link', { name: '설치 진단' }).click();

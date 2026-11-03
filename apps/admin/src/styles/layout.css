@@ -1,4 +1,8 @@
 /* Keep navigation and the page header in place while the workspace content scrolls. */
+.panel-head + .filter-bar { padding-top: 14px; }
+.toolbar:focus-within { border-color: #e88731; }
+.toolbar input:focus-visible { outline: none; }
+.rail-search input:focus-visible { outline: none; border-color: #e88731; }
 @media (min-width: 721px) {
   html, body, #root { height: 100%; }
   body { overflow: hidden; }
