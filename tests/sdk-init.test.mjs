@@ -169,6 +169,58 @@ test('consent gate and failed adapters prevent conversion while other active tag
   });
 });
 
+test('omitted adapters load published TikTok and Naver tags without landing changes', async () => {
+  const siteId = 'automatic-demo';
+  const common = [
+    { id: 'tiktok-common', provider: 'tiktok', enabled: true, trackingId: 'TIKTOKTEST' },
+    { id: 'naver-common', provider: 'naverWcs', enabled: true, trackingId: 's_TEST', inflowDomain: 'landing.example' },
+  ];
+  await withBrowser(async () => ({ ok: true, json: async () => published(siteId, common) }), async ({ window }) => {
+    const originalDocument = globalThis.document;
+    const scripts = [];
+    const calls = [];
+    const document = {
+      baseURI: 'https://landing.example/',
+      head: { appendChild(script) {
+        scripts.push(script);
+        script.isConnected = true;
+        if (script.src === 'https://wcs.naver.net/wcslog.js') {
+          queueMicrotask(() => {
+            window.wcs = { inflow: domain => calls.push(['inflow', domain]), trans() {} };
+            window.wcs_do = () => calls.push(['pageview']);
+            script.dispatch('load');
+          });
+        }
+        return script;
+      } },
+      createElement() {
+        const listeners = new Map();
+        return { async: false, src: '', isConnected: false,
+          addEventListener(name, listener) { listeners.set(name, listener); },
+          dispatch(name) { listeners.get(name)?.(); } };
+      },
+      querySelectorAll() { return scripts; },
+    };
+    window.location.hostname = 'landing.example';
+    globalThis.document = document;
+    const diagnostics = [];
+    const errors = [];
+    const sdk = new TrackingSdk({ siteId, configUrl: '/tracking-config', hasConsent: () => true,
+      onDiagnostic: signal => diagnostics.push(signal), onError: error => errors.push(error.message) });
+    try {
+      await sdk.start();
+      assert.deepEqual(scripts.map(script => new URL(script.src).hostname), ['analytics.tiktok.com', 'wcs.naver.net']);
+      assert.deepEqual(calls, [['inflow', 'landing.example'], ['pageview']]);
+      assert.deepEqual(diagnostics.filter(signal => signal.kind === 'adapter_setup').map(signal => signal.provider),
+        ['tiktok', 'naverWcs']);
+      assert.deepEqual(errors, []);
+    } finally {
+      sdk.destroy();
+      globalThis.document = originalDocument;
+    }
+  });
+});
+
 test('diagnostic callback reports safe local milestones without tokens or tracking IDs', async () => {
   const siteId = 'diagnostic-demo';
   await withBrowser(async () => ({ ok: true, json: async () => published(siteId, [gtm]) }), async () => {

@@ -23,17 +23,10 @@ Firebase 프로젝트 `landing-tracking`의 Google 로그인 제공자, Firestor
 <script>
   window.addEventListener('DOMContentLoaded', () => {
     const SITE_ID = 'your-site-id';
-    const { TrackingSdk, createGtmAdapter, createGoogleAdsAdapter,
-      createNaverWcsAdapter, createKarrotAdapter, createMetaAdapter,
-      createTikTokAdapter } = window.LandingTrackingSdk;
+    const { TrackingSdk } = window.LandingTrackingSdk;
     const sdk = new TrackingSdk({
       siteId: SITE_ID,
       configUrl: 'https://pixel-manager.web.app/tracking-config',
-      adapters: {
-        gtm: createGtmAdapter(), googleAds: createGoogleAdsAdapter(),
-        naverWcs: createNaverWcsAdapter(), karrot: createKarrotAdapter(),
-        meta: createMetaAdapter(), tiktok: createTikTokAdapter(),
-      },
       hasConsent: () => typeof window.hasAdConsent === 'function' && window.hasAdConsent() === true,
       verifyCompletionToken: async token =>
         sessionStorage.getItem(`ltm:completed:${SITE_ID}:${token}`) === '1' ? { eventId: token } : null,
@@ -58,7 +51,7 @@ Firebase 프로젝트 `landing-tracking`의 Google 로그인 제공자, Firestor
 </script>
 ```
 
-사이트의 동의 관리 API에 `hasConsent`를 연결해야 매체 스크립트가 실행된다. 기존 매체 태그가 같은 이벤트를 이미 전송한다면 해당 매체의 실행 주체를 하나로 정리한다. 문의·페이지뷰용 기존 SDK는 이 매체 SDK와 별개다. 사이트의 CSP가 있다면 `script-src`와 `connect-src`에 `https://pixel-manager.web.app`을 허용한다.
+사이트의 동의 관리 API에 `hasConsent`를 연결해야 매체 스크립트가 실행된다. SDK는 게시본에서 활성화된 매체의 내장 어댑터를 자동 사용한다. 기존 매체 태그가 같은 이벤트를 이미 전송한다면 해당 매체의 실행 주체를 하나로 정리한다. 새 매체 구현이나 SDK 동작 변경은 중앙 SDK 번들 배포가 필요하지만 랜딩 코드는 다시 배포하지 않는다. 문의·페이지뷰용 기존 SDK는 이 매체 SDK와 별개다. 사이트의 CSP가 있다면 `script-src`와 `connect-src`에 `https://pixel-manager.web.app`을 허용한다.
 
 관리자 설치 진단은 랜딩 브라우저가 보낸 초기화 신호의 수신 시각이다. 광고 플랫폼의 전환 수신을 증명하지 않으므로 실제 사이트와 각 매체 진단 도구에서 별도로 확인한다. 현재 저장소에는 실제 랜딩 소스가 없어 사이트 코드 적용은 사용자가 수행한다.
 

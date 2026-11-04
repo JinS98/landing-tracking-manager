@@ -1,7 +1,7 @@
 import type { DemoWorkspace, Provider } from '../types/tracking';
 
 export const providerLabels: Record<Provider, string> = {
-  gtm: 'Google Tag Manager', googleAds: 'Google Ads', naverWcs: 'Naver WCS',
+  gtm: 'Google Tag Manager', googleAds: 'Google Ads', naverWcs: 'Naver WCS (검색·성과형 공통)',
   karrot: '당근 Pixel', meta: 'Meta Pixel', tiktok: 'TikTok Pixel',
 };
 

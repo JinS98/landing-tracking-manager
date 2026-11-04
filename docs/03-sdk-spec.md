@@ -2,7 +2,7 @@
 
 ## 현재 코드 범위
 
-tracking-core는 초안과 공개 설정을 같은 매체별 규칙으로 검증하고, 데모 게시 시 공개 필드만 투영합니다. 허용되지 않은 필드가 있으면 읽기를 거부합니다. tracking-sdk는 게시 설정 로더, fetch 최대 2회, 타임아웃, 사이트별 태그 로딩 중복 방지, History API와 popstate 이동 감지, 랜덤 token 기반 /complete 전환 감지, sessionStorage 중복 시도 방지, track('consultation_complete', { eventId }) 인터페이스를 제공합니다. 6개 매체 어댑터는 **선택적 주입 모듈**입니다. 브라우저 번들 빌드는 가능하지만 실제 랜딩 수신 검증과 운영 배포는 아직 없습니다. 어댑터를 주입하지 않은 SDK는 광고 태그를 실행하지 않습니다.
+tracking-core는 초안과 공개 설정을 같은 매체별 규칙으로 검증하고, 데모 게시 시 공개 필드만 투영합니다. 허용되지 않은 필드가 있으면 읽기를 거부합니다. tracking-sdk는 게시 설정 로더, fetch 최대 2회, 타임아웃, 사이트별 태그 로딩 중복 방지, History API와 popstate 이동 감지, 랜덤 token 기반 /complete 전환 감지, sessionStorage 중복 시도 방지, track('consultation_complete', { eventId }) 인터페이스를 제공합니다. `adapters` 옵션을 생략하면 게시본의 활성 매체에 내장 어댑터를 자동 연결합니다. 명시적인 맵을 전달하면 해당 매체만 연결하며 `{}`는 태그를 로드하지 않습니다. 실제 광고 플랫폼 수신은 별도 검증이 필요합니다.
 
 **실제 저장소 코드 확인:** 위 범위는 현재 tracking-core·tracking-sdk 소스에서 확인했다. **참고 코드 확인:** 사용자 제공 기존 랜딩 사례에는 app/layout.tsx의 next/script 공통 태그, 문의·페이지뷰용 mleverage.client.js(사용자 확인), /complete?token 이동, 완료 페이지의 sessionStorage 중복 방지 및 Google Ads·Meta 전환 호출, Naver WCS 사용 경험이 포함된다. 원본 랜딩 코드를 이번 작업에서 열어 확인한 것은 아니다. **운영 환경 검증 필요:** 실제 설치 위치와 동작, GTM 내부 설정, Naver WCS 호출 버전, 플랫폼 수신 결과.
 
@@ -29,6 +29,8 @@ SDK는 유효한 siteId로 공개 게시본만 요청합니다. 응답은 schema
 
 10일차 Naver 어댑터는 [네이버 `wcs.trans` 설치 가이드](https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/)에 따라 `wcslog.js` 로드 후 `wcs_add.wa` 설정, `wcs.inflow(inflowDomain)`, `wcs_do()`를 실행합니다. 전환은 `wcs.trans({type: conversionType})`로 별도 호출합니다. `inflowDomain`은 공식 가이드의 쿠키 도메인 값이며, 이 SDK는 현재 호스트가 해당 도메인 또는 하위 도메인일 때만 실행합니다. 현재 설정은 호스트만 허용하고 경로 단위 쿠키 도메인은 지원하지 않습니다. `purchase`는 필수 전환 금액 필드가 설정에 없으므로 게시 단계에서 거부합니다. 기존 `_nasa.cnv`가 보이면 충돌을 막지만, 인라인 코드나 GTM 안의 모든 구형 태그를 탐지할 수는 없습니다. 실제 랜딩의 WCS 버전과 실행 주체를 확인한 뒤 활성화해야 합니다. SPA 라우트별 PV 전송은 아직 구현하지 않았습니다.
 
+네이버 공식 가이드에서 검색광고(SA)와 성과형 디스플레이 광고(GFA)는 같은 네이버 공통키와 `wcs.trans` 스크립트를 사용합니다. 두 상품을 위해 `wcs.cnv()`와 `wcs.trans()`를 함께 호출하지 않습니다. 구형 `wcs.cnv('1', '1')`의 `1`은 구매 전환 유형이며 `wcs.trans({ type: 'lead' })`는 신청 전환 유형입니다. 게시본의 Naver 전환 설정은 실제 문의 완료 흐름에서만 실행됩니다.
+
 11일차 당근 어댑터는 [공식 공통 스크립트](https://bizschool.daangn.com/19128c3a-9f8f-8154-b217-d03d2f6ddf5c)의 `karrotPixel` 큐와 `ViewPage`, [서비스 신청 이벤트](https://bizschool.daangn.com/19128c3a-9f8f-8126-bcc3-e287ef8ab51a)의 `SubmitApplication`을 사용합니다. TikTok 어댑터는 [공식 픽셀 코드 예시](https://ads.tiktok.com/gateway/docs/index?doc_id=1701890973258754)의 `ttq.load`, `ttq.page`, 픽셀 인스턴스의 `track('SubmitForm')`을 사용합니다. Meta 어댑터는 `fbq` 큐와 `fbevents.js`를 설치하고 Pixel ID에 한정한 `trackSingle`로 `PageView`와 `Lead`를 보냅니다. Meta 개발자 문서는 이 작업 환경에서 로그인/요청 제한으로 본문을 열 수 없어 실제 Meta 이벤트 관리자에서 호출 계약을 재확인해야 합니다. 세 어댑터 모두 기존 전역 객체의 ID가 큐에서 확인되면 재사용하고, 확인할 수 없으면 실행을 중단합니다. 기존 GTM 내부 픽셀이나 이미 발생한 전환은 자동 판별할 수 없습니다. SPA 라우트별 페이지뷰는 아직 구현하지 않았습니다.
 
 어댑터의 외부 스크립트 URL 검사는 동일한 직접 설치 태그의 중복 삽입을 줄이기 위한 것입니다. next/script의 모든 삽입 방식, 인라인 하드코딩 태그, GTM 컨테이너 내부 태그까지 판별할 수 없습니다. 사용자 확인에 따르면 기존 mleverage.client.js는 문의·페이지뷰용이며 매체 픽셀 점검 대상과 별개입니다. 특히 GTM 컨테이너 안에 같은 Ads 전환이 있으면 직접 Ads 어댑터를 함께 활성화하지 않습니다. 배포 전 원본 코드·컨테이너 인벤토리와 실제 사이트 검증이 필수입니다.
@@ -45,6 +47,6 @@ SDK는 유효한 siteId로 공개 게시본만 요청합니다. 응답은 schema
 
 ## 19일차 설치 준비와 로컬 브라우저 검증
 
-`npm run build:sdk`는 브라우저용 IIFE 파일 `packages/tracking-sdk/dist/landing-tracking-sdk.iife.js`를 생성합니다. 호스트 랜딩은 빌드 결과물을 정적 자산으로 배치하고, 사이트별 `siteId`와 **운영에 배포된** 공개 설정 URL, 실제 동의 상태를 제공해야 합니다. 처음에는 `adapters: {}`로 설치해 설정 조회·라우트 감지만 확인합니다. 특정 매체의 기존 직접 태그와 GTM 내부 전환 주체를 확인하고 끈 뒤에만 해당 매체 어댑터를 주입합니다. 기존 문의·페이지뷰용 `mleverage.client.js`는 이 매체 주체 이전 대상이 아닙니다.
+`npm run build:sdk`는 브라우저용 IIFE 파일 `packages/tracking-sdk/dist/landing-tracking-sdk.iife.js`를 생성합니다. 호스트 랜딩은 SDK 번들을 로드하고 사이트별 `siteId`, 공개 설정 URL, 실제 동의 상태를 제공합니다. 게시본의 활성 매체는 기본 어댑터로 실행되므로 매체 설정을 바꿀 때 랜딩 코드를 수정할 필요가 없습니다. 초기 점검에는 `adapters: {}`를 명시할 수 있습니다. 자동 모드를 켜기 전에 기존 직접 태그와 GTM 내부 전환 주체를 정리해야 중복 전송을 막을 수 있습니다. 새로운 매체 구현을 추가하면 중앙 SDK 번들을 배포해야 합니다. 기존 문의·페이지뷰용 `mleverage.client.js`는 이 매체 주체 이전 대상이 아닙니다.
 
 이 저장소의 가상 랜딩 픽스처는 실제 Edge에서 랜덤 token 완료 이동, 실패 시 미이동, 뒤로 가기·재방문 중복 방지, 동의 거부, 외부 태그 차단 시 이동 지연 없음, 기존·신규 전환 코드 동시 활성화 시 2회 시도를 검증합니다. Next.js 프로젝트 원본은 아직 없으므로 `next/script`, 실제 문의 API와 광고 플랫폼 수신은 검증하지 않았습니다. `onDiagnostic`의 `adapter_setup`은 어댑터의 초기화 코드 실행만 뜻하며 외부 네트워크 로드 성공 또는 광고 플랫폼 수신을 뜻하지 않습니다.

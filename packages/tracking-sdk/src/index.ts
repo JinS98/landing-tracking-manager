@@ -1,4 +1,7 @@
 import { isValidSiteId, parsePublishedConfig, type CommonTag, type ConversionTag, type Provider, type PublishedConfig } from '@ltm/tracking-core';
+import { createGtmAdapter, createGoogleAdsAdapter } from './adapters/google.ts';
+import { createNaverWcsAdapter } from './adapters/naver.ts';
+import { createKarrotAdapter, createMetaAdapter, createTikTokAdapter } from './adapters/social.ts';
 export { createGtmAdapter, createGoogleAdsAdapter, type GoogleAdapterEnvironment } from './adapters/google.ts';
 export { createNaverWcsAdapter, type NaverAdapterEnvironment } from './adapters/naver.ts';
 export { createKarrotAdapter, createMetaAdapter, createTikTokAdapter, type SocialAdapterEnvironment } from './adapters/social.ts';
@@ -16,7 +19,8 @@ export type TrackingDiagnostic = {
 export type TrackingSdkOptions = {
   siteId: string;
   configUrl: string;
-  adapters: Partial<Record<Provider, ProviderAdapter>>;
+  /** Omit to load every enabled provider from the published config. Pass a map to override or disable adapters. */
+  adapters?: Partial<Record<Provider, ProviderAdapter>>;
   hasConsent: () => boolean;
   /** Optional extra validation for completion tokens. Return null to suppress conversion. */
   verifyCompletionToken?: (token: string) => Promise<{ eventId: string } | null>;
@@ -41,7 +45,7 @@ const digest = (value: string) => {
   return (hash >>> 0).toString(36);
 };
 
-/** Browser runtime. Provider adapters are opt-in so each site's existing tags can be reconciled first. */
+/** Browser runtime. Published tags use built-in adapters unless the host supplies an override map. */
 export class TrackingSdk {
   private config: PublishedConfig | null = null;
   private started: Promise<void> | null = null;
@@ -50,7 +54,18 @@ export class TrackingSdk {
   private destroyed = false;
   private readonly loadedProviders = new Set<Provider>();
   private readonly options: TrackingSdkOptions;
-  constructor(options: TrackingSdkOptions) { this.options = options; }
+  private readonly adapters: Partial<Record<Provider, ProviderAdapter>>;
+  constructor(options: TrackingSdkOptions) {
+    this.options = options;
+    this.adapters = options.adapters ?? {
+      gtm: createGtmAdapter(),
+      googleAds: createGoogleAdsAdapter(),
+      naverWcs: createNaverWcsAdapter(),
+      karrot: createKarrotAdapter(),
+      meta: createMetaAdapter(),
+      tiktok: createTikTokAdapter(),
+    };
+  }
 
   start(): Promise<void> {
     if (this.destroyed) return Promise.resolve();
@@ -83,7 +98,7 @@ export class TrackingSdk {
       for (const tag of this.config.common.filter(item => item.enabled)) {
         if (this.destroyed || !this.hasConsent()) return;
         const key = this.options.siteId + ':' + tag.provider + ':' + tag.trackingId;
-        const adapter = this.options.adapters[tag.provider];
+        const adapter = this.adapters[tag.provider];
         if (!adapter) continue;
         if (registry.has(key)) { this.loadedProviders.add(tag.provider); continue; }
         try { await adapter.load(tag); registry.add(key); this.loadedProviders.add(tag.provider); this.emitDiagnostic('adapter_setup', tag.provider); }
@@ -201,7 +216,7 @@ export class TrackingSdk {
     seenConversions.set(window, seen);
     for (const tag of this.config.conversions.filter(item => item.enabled && item.event === event)) {
       if (!this.loadedProviders.has(tag.provider)) continue;
-      const adapter = this.options.adapters[tag.provider];
+      const adapter = this.adapters[tag.provider];
       if (!adapter) continue;
       const key = 'ltm:' + this.options.siteId + ':' + tag.id + ':' + digest(input.eventId);
       if (seen.has(key)) continue;
